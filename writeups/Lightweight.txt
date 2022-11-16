@@ -1,0 +1,35 @@
+# Overview
+In this challenge, we have an LDAP injection as the challenge description already gives us the hint. 
+
+# Attack Execution
+Thus, on the login page, we first tried some LDAP injection payload which results in some nice PHP error messages.
+A closing bracket breaks the LDAP filter.
+
+# Analysis
+We can see that the closing bracket breaks the LDAP filter, thus we can probably inject more filters.
+Furthermore, when we click in Our team the webpage tells us that they have four users, three developers and one admin.
+
+The webpage has three developers and one admin
+After some tries with the given emails and other input, we came to the conclusion that we can get three outputs:
+An error message “No such user !” when the request was correct, but LDAP found no user with our given filter. For example, email foo@bar.de cannot be found.
+An error message “Invalid username/password !” when the request was correct and LDAP found the user, but our password was not correct. For example, email jdoe@dvctf.local works fine.
+An error message “Invalid username/password !” plus the PHP error messages when the request was broken. For example the closing bracket.
+
+# Attack Execution
+At this point, we injected a new filter into the LDAP request and brute forced the description of the users as a proof of concept.
+
+The injected filter returns “Invalid username/password !” since the user was found with this filter but the password was incorrect.
+In the example below, I use the Burp Intruder to try all possibilities for description, one by one. You can see, that I previously found the description sysa and the request shows me that the next letter is d. In the end, the description will be sysadmin.
+After the brute force attempt worked fine for description, we tried the same with userPassword as it is the standard password key for LDAP. 
+With * the request worked fine, however, no character we tried resulted in “Invalid username/password !” but only “No such user !”.
+
+# Analysis
+Searching on the internet for brute force methods against LDAP’s userPassword led us to another writeup with exactly the same problem.
+The userPassword is an octet string and thus cannot be brute-forced the same way as a normal string. 
+However, we can use other operators on the userPassword, for instance, octetStringOrderingMatch. 
+To do so, we only need to add the OID of octetStringOrderingMatch 2.5.13.18 behind userPassword and can brute-force byte values, like in the payload below.
+
+# Attack Execution
+Finally, after bruteforcing the password hash, we have the base64 of the MD5 hash.
+Submitting this hash to https://crackstation.net/, we receive the password Chicken123.
+Now we can log in as the mkiloa@dvctf.local see the flag.

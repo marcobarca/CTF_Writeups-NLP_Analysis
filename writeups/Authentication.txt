@@ -1,0 +1,8 @@
+# Overview
+We can see a login page with the goal to log in as admin.
+
+# Analysis
+Of course, we could try various SQLi techniques, but here, already the first SQLi textbook exploit works: ‘ OR 1==1-- as username logs us in as admin.
+
+# Attack Execution
+On the webpage, we don’t see a flag so we open the source code of the page with ctrl-u and find the flag as a hidden field at the bottom of the page.

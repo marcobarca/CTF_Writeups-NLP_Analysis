@@ -1,0 +1,16 @@
+# Overview
+There is a secure website running at https://2019shell1.picoctf.com/problem/47247/. 
+
+# Analysis
+Try to see if you can login as admin!
+Since the password is hinted to be encrypted, we first check the page source for any signs of encryption to the input, however, do not see any. 
+This means the encryption must be taking place server side.
+We want to leak the encryption method somehow, so we open BurpSuite to monitor the requests made to the site. 
+We input some string and submit the request. In BurpSuite, we notice a debug parameter, originally set to 0.
+We change this to a 1, and forward the request. Now in addition to the Login failed page, we get some debug info:
+The 'encryption' method used is just ROT13! We can thus craft our payloads normally, just running it through a ROT13 converter before sending it through.
+
+# Attack Execution
+We utilise a simple payload that escapes the string and always evaluates to true
+'Encrypting' it, we get.
+Submitting this as the input, we get our flag.

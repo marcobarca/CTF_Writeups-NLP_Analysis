@@ -1,0 +1,19 @@
+
+# Overview
+When following the link, we get an ERR_UNSAFE_PORT. 
+
+# Analysis
+A bit of googling shows that port 6666 is unsafe and must manually be allowed. In Chrome, this is possible via the option —explicitly-allowed-ports=6666 , in Firefox we can add the option network.security.ports.banned.override with the value 6666 in about:config.
+Afterwards, we can see a homepage with one input field to enter our homework.
+The webpage has one input field.
+If we enter Markdown or HTML it would render it as HMTL.
+The result of the rendered homepage.
+We soon found out that it was rendered with Pandoc as it stands in the webpage source and that we could enter an external source to be contained in the rendered output. For instance, if we submit a script tag with our controlled URL, we could see the content of the URL in the response from the server. This means, the request takes place on the server and not on the client. The Pandoc documentation refers to this as the — self-containedoption.
+We can see the Hello World content of our URL loaded in the response from the server.
+
+# Attack Execution
+Knowing this, we tried to load local files with the file:// scheme. However, the server would always respond with an error.
+This was until randomly, a colleague tried to add the type attribute type="text/plain" and got a result. Together with this attribute and the correct source, we were able to exfiltrate /etc/passwd.
+From here, we looked at /proc/self/environto list the environment variables.
+
+From the environment variables, we can see some interesting directories to search for the flag. Finally, the flag was in /app/flag.

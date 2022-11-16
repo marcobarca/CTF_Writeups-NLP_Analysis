@@ -1,0 +1,19 @@
+# Overview
+We get a test user:
+username: test
+password: Test123!
+If we log in, we get an empty page.
+
+# Analysis
+
+Let’s look at the login HTTP request.
+Nothing interesting. If we get set “Remember me” on we get the same request. Let’s check our cookies.
+This is a JWT token. Let’s decode it.
+We have a role part that is set to “user”. If we were to set it to admin, maybe we could log in as admin. I used https://jwt.io to encode it and we get.
+
+# Attack Execution
+If we try setting that as our token, we can’t log in. So maybe if we change the alg to “none” we could log in:
+This is the header.
+This is the payload.
+We encoded the following payload.
+Nice we get the flag!

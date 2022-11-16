@@ -1,0 +1,27 @@
+# Overview
+We have again a login page. This time only, we can register a user. 
+
+# Analysis
+Instead of the path /members, this time we have /security. 
+The security page shows an empty table with the columns IP and time.
+Since the description tells us that we can see when someone tries to log into our account, we tried to log into our account with a false password. 
+Voilà — an entry appears in the table showing my IP address (this is obviously not really mine) and a timestamp.
+
+The table shows the IP address of people who tried to break into your account.
+
+# Attack Execution
+We then tried to change our IP address with the X-Forwarded-For header and it worked. The following request resulted in the IP 1.2.3.4 showing up in our table.
+Next, we put an XSS payload in the header instead of the IP and the good old alert popped.
+
+Since we had XSS, we guessed that there must be an admin user we can attack with our exploit. So, we sent the same request as above to admin and the following header:
+The payload worked on our side but unfortunately, we did not receive any request from an admin.
+
+Another payload we tried showed us that there indeed is an admin user. 
+With the following payload, the admin user admin requests an image from our URL. 
+The only thing is that we cannot execute Javascript and exfiltrate data.
+
+With our URL as image source, we receive a request from the user admin.
+We tried various payloads and ideas but did not succeed.
+A colleague message us that the admin uses PhantomJS, as you can see in the user-agent, and PhantomJS does not support fetch. We should have tried the good old XMLHttpRequest. 
+Finally, we sent a request to the admin that loads more Javascript code via the XSS in the X-Forward-For header. 
+The loaded payload sends the cookies of the user back to us. Thus, we received the flag.

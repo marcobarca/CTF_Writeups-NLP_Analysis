@@ -1,0 +1,19 @@
+# Overview
+Visiting the website, we are presented with a login form (and a Robert Frost poem).
+The hint says "XPATH", and using some common XPATH injection techniques we can leak some information about the underlying DB.
+
+# Analysis
+The idea is similar to SQL injection. 
+We have a vulnerable query for authenticating the username and password which should be similar to.
+So, if we inject some valid XPATH vocabulary into the query, we can manipulate it.
+
+# Attack Execution
+For example, let's inject:
+This should tell us if the password of the first username is longer than 1 character. 
+If we submit this as the username, we get back a response from the server telling us that "You're on the right path", so we can deduce that password is longer than 1. 
+If we try this, on the other hand, we receive a "Login Failure": so the password is shorter than 30 characters.
+
+Let's use the following syntax to iterate some users and check if someone's password starts with "pico":
+We'll use curl.
+We got a match for the third user. Now let's extract his password with the following script.
+The script uses XPATH substring to brute force the password character by character. As output we have the flag.

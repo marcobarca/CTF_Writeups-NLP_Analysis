@@ -1,0 +1,20 @@
+# Overview
+In the challenge members, we need to get more information about the members. This, again, sounds like an SQLi challenge.
+When we visit the members' page, we can see a search field and all members listed.
+The page shows a search field and all the members.
+
+# Analysis
+If we leave the search query empty, we would see all members, else it filters the name.
+
+# Attack Execution
+We tried out some SQLi payloads to see that a simple UNION SELECT works and gives results. The UNION SELECT is used to combine the result of two or more SELECTs. Since x gives no result, 1,1,1 is returned as result and verifies the SQLi.
+
+A simple union select as PoC.
+With this in mind, we looked for the database engine which is probably MySQL.
+
+A simple union select to leak the database version.
+Then we listed all tables and columns and saw that there is a table called supa_secret_table with the column flag.
+x" UNION SELECT COLUMN_NAME, TABLE_NAME,table_schema FROM INFORMATION_SCHEMA.COLUMNS;
+
+An extract of all tables and columns.
+A quick query later, we received the flag.

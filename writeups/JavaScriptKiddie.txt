@@ -1,0 +1,27 @@
+# Overview
+The image link appears broken.
+
+# Analysis
+Looking at the source code of the website, we see a script that seems to be constructing our image by manipulating some values in an array named "bytes", and our input, otherwise called key in the code.
+We get the bytes array through the browser console.
+
+The script seems to be doing:
+Use the input as the key
+For each number in the key, convert the string to the actual number(char()-48), store it in variable i.
+Get the byte value for the resultant PNG at position (i , j), by the following formula.
+Remove all trailing zeros from the file.
+Use the result as the source for the PNG displayed on the page.
+
+Looking at the file signature for a PNG file, we see that the first 8 bytes of the file have to be 89 50 4E 47 0D 0A 1A 0A, and the trailing 8 bytes have to be 49 45 4E 44 AE 42 60 82. 
+
+# Attack Execution
+We can thus write a python script to find us possible values for the first 8 digits of the key using the header, and the last 8 digits using the trailer, giving us the final key.
+
+This gives us the first 8 digits.
+For the last 8 digits, the actual result might include a bunch of 0s at the end, instead of the actual trailer, as we see that the javascript script actually does work to remove these just before the image is used as a source. 
+We thus try our luck with the ending being 00 00 00 00 00 00 00 00 first, as we notice multiple 0s in the bytes array, leading us to believe that some of these might actually be at the end. 
+We get a list of possible numbers for the last 8 digits of the key with this script.
+
+We then use the following to iterate through the combination possibilities.
+We use the command pngcheck output*, and notice that output0 gives OK. 
+We open it and see a qr code, whcih we use zbarimg to decode to get the flag.

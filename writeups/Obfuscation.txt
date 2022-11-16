@@ -1,0 +1,9 @@
+#Overview
+When we visit the website, we can see an input field to submit a secret. 
+
+#Analysis
+As we don't know the secret, we first look into the source code of the webpage and see obfuscated Javascript.
+
+#Attack Execution
+With JSnice we can deobfuscate the code a bit and see the following.
+I did not read all the code but only tried the first two lines of the testSecret function in line 37/38. The result is the flag.
