@@ -1,0 +1,58 @@
+Writeup_name,Category,Text,Label
+Members,web,"If we leave the search query empty, we would see all members, else it filters the name.",analysis
+High_Security,web,"We have again a login page. This time only, we can register a user.",overview
+27_Forbidden_Paths,web,"This website has the useful feature of reading any file we want it too, given its path.",overview
+27_Forbidden_Paths,web,"With file paths, a preceeding ./ means the current directory, and ../ means the enclosing directory.",analysis
+27_Forbidden_Paths,web,"Since we know that we are in /usr/share/nginx/html/, and want to access /flag.txt, we can just use the path ../../../../flag.txt to read the flag.",attack_execution
+28_Power_Cookie,web,"As suggested by the challenge name, the solution likely involves changing a cookie value.",overview
+28_Power_Cookie,web,"If we go to the website, we find that there are no cookies saved. However, if we click the continue as guest button, we see that a cookie with the name isAdmin is generated, with the value 0.",analysis
+28_Power_Cookie,web,"0 means false here, so if we change the cookie's value to 1 and refresh, the website treats us like the admin, giving us the flag.",attack_execution
+22_Web_Gauntlet_2,web,The challenge gives us a link which opens a webpage allowing us to login with a username and password that we can deduce are vulnerable to SQL injection. Looking at the filter link we can see what we must avoid when crafting our SQL injection.,overview
+22_Web_Gauntlet_2,web,"Using the final values of username and password for login we get the message ""Congrats! You won! Check out filter.php"". Finally reloading the filter.php page gives us this source code with the flag.",attack_execution
+05_Some_Assembly_Required_1,web,"Upon visiting the website, it appears to just be a textbox with a form.",overview
+05_Some_Assembly_Required_1,web,"I visited mercury.picoctf.net:55336/JIFxzHyW8W and it gave a WebAssembly file. At the bottom of the file, there was the flag.",attack_execution
+21_Some_Assembly_Required_3,web,"Upon visiting the website, it appears to just be a textbox with a form.",overview
+12_login,web,"On first inspection, when faced with a login screen, it seems like SQL injection, because isn’t that what always happens with logins in CTFs?",overview
+12_login,web,"If you’re not convinced it’s the real flag, you can decode the username (admin) and input both into the login form, which results in an alert announcing the flag.",attack_execution
+02_Spookifier,web,"Then using the following payload, we can run commands on the system and read our flag.",attack_execution
+25_Web_Gauntlet,web,"In this challenge, we are linked to a login form we are meant to bypass with SQL injection. At each level the filter changes, so we have to update your injection as necessary.",overview
+Homework,web,"When following the link, we get an ERR_UNSAFE_PORT.",overview
+Notepad,web,"The application is a simple note-taking site. When a new note is created, a file in the static folder is created, and the client is redirected to the file.",overview
+Authentication,web,We can see a login page with the goal to log in as admin.,overview
+Authentication,web,"Of course, we could try various SQLi techniques, but here, already the first SQLi textbook exploit works: ‘ OR 1==1-- as username logs us in as admin.",analysis
+Authentication,web,"On the webpage, we don’t see a flag so we open the source code of the page with ctrl-u and find the flag as a hidden field at the bottom of the page.",attack_execution
+Note,web,"After browsing the site for few minutes, I realised that you can inject html code while creating new notes.",overview
+15_Local_Authority,web,"When you go to the website, you find the following login screen:",overview
+03_modernblog,web,"The text color is red, and the content is exactly of the /home page. We finally reach the point! Load the /home page, inject CSS to leak the flagId bit by bit to get the flag!!!!!!!!!",analysis
+JavaScriptKiddie,web,The image link appears broken.,overview
+01_Pirate_birthday_planner,web,The portion of code to check if a user is authorized in the party is done in this middleware,overview
+02_Cookies,web,Let's search for that special cookie by trying different numbers:,attack_execution
+29_Roboto_Sans,web,"If we decode each line separately, we find that the second line gives us a valid path, specifically js/myfile.txt. If we navigate to the suburl, we get the flag.",attack_execution
+26_Some_Assembly_Required_4,web,"Using this, I was able to write a quick Node.js script that would brute force the characters. I’ve cleaned it up a bit and added comments for a bit of clarity.",attack_execution
+26_Some_Assembly_Required_4,web,"Not being great at reverse engineering was for me a blessing, because otherwise I would have spent a lot of time and effort attempting to understand what the code was actually doing. Not being familiar with it gave me a different perspective, which allowed me to conceptualize a much easier solution to the challenge. I think this challenge was quite interesting, if not a bit misplaced given that it had very little to do with Web Exploitation.",analysis
+30_Secrets,web,The flag is probably hidden by the css. We can just look at the HTML source to get the flag.,attack_execution
+Lightweight,web,"In this challenge, we have an LDAP injection as the challenge description already gives us the hint.",overview
+03_Insp3ct0r,web,Hence combining the 3 parts gives the flag:,attack_execution
+04_Juggling_Facts,web,"So, providing the true keyword in type parameter makes the first switch case true when presents the secrets and our flag.",attack_execution
+18_Super_Serial,web,"Going to robots.txt shows that admin.phps is disallowed. This indicates that the phps extension is enabled within the php configuration for this webserver. Files with the phps extension contain php code but instead of running when they are accessed, they return an HTML representation of the literal php code.",overview
+Obfuscation,web,"When we visit the website, we can see an input field to submit a secret.",overview
+Obfuscation,web,"As we don't know the secret, we first look into the source code of the webpage and see obfuscated Javascript.",analysis
+01_Get_aHEAD,web,"Looking at the HTML of the website, we can see that both red and blue make a request to the same URL, however with a different HTTP request method. We can make the educated guess that the flag will be acessible by using a different HTTP request method.",overview
+01_Get_aHEAD,web,"As this challenge is named ""Get aHEAD,"" we can conclude that we must use the ""HEAD"" method to get the flag.",attack_execution
+17_Some_Assembly_Required_2,web,"Upon visiting the website, it appears to just be a textbox with a form.",overview
+17_Some_Assembly_Required_2,web,We'll take this string and XOR it with 8 to get the flag.,attack_execution
+01_simplewaf,web,The target of this challenge is reading the content of flag.txt file... but by someway to bypass the check includes('flag') of waf. All of the challenge code can be seen at main.js.,overview
+01_simplewaf,web,"Bravo! Think that I found the right spot, I try the payload file[]=x&file[]=flag.txt. Unlucky, it can't bypass waf of this challenge",attack_execution
+01_simplewaf,web,"At the first thought, I try format the string as a URL: http://localhost:3456/wow.html. Unlucky, it doesn't works~",attack_execution
+02_friends,web,"Another instance challenge, which again makes me so inconvenience to debug and investigate, so I create a docker images for this challenge and host it locally. I also upload the Dockerfile at my github repo.",overview
+Friends,web,"Another instance challenge, which again makes me so inconvenience to debug and investigate, so I create a docker images for this challenge and host it locally. I also upload the Dockerfile at my github repo.",overview
+08_logon,web,"No matter what credentials we use for the login, it successfully logs us in but doesn't give us the flag. This suggests that a cookie might be used to store a separate variable that might be preventing us from seeing the flag.",overview
+08_logon,web,"Sure enough, we notice an admin cookie set to False. Changing this to True and refreshing the page gives us the flag:",attack_execution
+19_Most_Cookies,web,I analyzed the server.py reference code. The highlighted code below has great importance.,overview
+24_Client-side-again,web,"We visit the website and inspect the source code, let's call a Javascript Beautifier in order to make the Javascript code a bit more readable.",overview
+23_picobrowser,web,"This website has a button you can press that will give you the flag. However, if you press it in your web browser, it will give you an error saying ""You're not picobrowser!"" and list some text after it that depends on your OS and browser (for me, it says Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:70.0) Gecko/20100101 Firefox/70.0, but yours will likely be different).",overview
+23_picobrowser,web,That string of text is known as a User-Agent and it tells the server what browser you're using.,analysis
+23_picobrowser,web,"To convince them that you're running picobrowser, you can just change your user-agent string. To do this, I chose to use curl because it easily allows you to control the headers.",attack_execution
+09_dont-use-client-side,web,"Opening the website greets us with a 'login' page, requiring credentials.",overview
+09_dont-use-client-side,web,"We assemble the credentials, and hence the flag, accordingly:",attack_execution
+Irish-Name-Repo3,web,There is a secure website running at https://2019shell1.picoctf.com/problem/47247/.,overview

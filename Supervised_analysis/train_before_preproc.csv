@@ -1,0 +1,670 @@
+Writeup_name,Category,Text,Label
+XMarkTheSpot,web,"Visiting the website, we are presented with a login form (and a Robert Frost poem).
+The hint says ""XPATH"", and using some common XPATH injection techniques we can leak some information about the underlying DB.",overview
+XMarkTheSpot,web,"The idea is similar to SQL injection. 
+We have a vulnerable query for authenticating the username and password which should be similar to.
+So, if we inject some valid XPATH vocabulary into the query, we can manipulate it.",analysis
+XMarkTheSpot,web,"For example, let's inject:
+This should tell us if the password of the first username is longer than 1 character. 
+If we submit this as the username, we get back a response from the server telling us that ""You're on the right path"", so we can deduce that password is longer than 1. 
+If we try this, on the other hand, we receive a ""Login Failure"": so the password is shorter than 30 characters.
+Let's use the following syntax to iterate some users and check if someone's password starts with ""pico"":
+We'll use curl.
+We got a match for the third user. Now let's extract his password with the following script.
+The script uses XPATH substring to brute force the password character by character. As output we have the flag.",attack_execution
+Members,web,"In the challenge members, we need to get more information about the members. This, again, sounds like an SQLi challenge.
+When we visit the members' page, we can see a search field and all members listed.
+The page shows a search field and all the members.",overview
+Members,web,"If we leave the search query empty, we would see all members, else it filters the name.",analysis
+Members,web,"We tried out some SQLi payloads to see that a simple UNION SELECT works and gives results. The UNION SELECT is used to combine the result of two or more SELECTs. Since x gives no result, 1,1,1 is returned as result and verifies the SQLi.
+A simple union select as PoC.
+With this in mind, we looked for the database engine which is probably MySQL.
+A simple union select to leak the database version.
+Then we listed all tables and columns and saw that there is a table called supa_secret_table with the column flag.
+x"" UNION SELECT COLUMN_NAME, TABLE_NAME,table_schema FROM INFORMATION_SCHEMA.COLUMNS;
+An extract of all tables and columns.
+A quick query later, we received the flag.",attack_execution
+05_Cursed_Secret_Party,web,"Starting the challenge, we get the following page which presents a form.
+Submitting the form, it says that request will be reviewed by team.",overview
+05_Cursed_Secret_Party,web,"Looking into the burpsuite proxy, it is posting data to the submit endpoint.
+Tracing into the source code, this endpoint adds the post data in the database and calls a visit function from bot. The other endpoint is /admin which gets the data from db and passes it into the admin template and /admin/delete_all endpoint deletes all the data from db.
+Looking into the visit function which is called when we submit the form. It first creates a headless browser and it signs and sets an admin JWT which contains flag. This gives the idea that we need to steal this admin cookie. Then it visits the /admin page which displays all the data from db and then it calls delete_all endpoint which deletes all data from db.
+Now, that we know that we need to steal admin cookie and also the admin is rendering the user input data, we can perform XSS to grab the cookie.
+Looking in the admin template which displays the form data to admin, the halloween name field is marked safe which means it will not escape character, so we can inject our js code in it.
+But the problem is that it has a CSP header which we need to bypass for our XSS to work. Understanding the CSP that script source is set to self and jsdelivr CDN which means it will only trust JS code from itself or the cdn.
+Fortunately this CDN lets us load files from github and other sources. Which means that we can bypass the CSP and perform our XSS.
+So, the idea is to make repo on github and upload the js file, which contains our payload, on it. Since we need to grab the cookie, we add a new image tag and set the source to our own link which logs the request and then append the cookie in the get request. Here i am using webhook.site.",analysis
+05_Cursed_Secret_Party,web,"Then convert the link of payload file on github to CDN url format.
+Next, we inject the following payload in the halloween_name parameter which first closes the div tag and then add our script from the github.
+After send the request, we get a hit on our link which in query strings contains the admin session cookie.
+Decoding the admin JWT, we get the flag.",attack_execution
+High_Security,web,"We have again a login page. This time only, we can register a user.",overview
+High_Security,web,"Instead of the path /members, this time we have /security. 
+The security page shows an empty table with the columns IP and time.
+Since the description tells us that we can see when someone tries to log into our account, we tried to log into our account with a false password. 
+Voilà — an entry appears in the table showing my IP address (this is obviously not really mine) and a timestamp.
+The table shows the IP address of people who tried to break into your account.",analysis
+High_Security,web,"We then tried to change our IP address with the X-Forwarded-For header and it worked. The following request resulted in the IP 1.2.3.4 showing up in our table.
+Next, we put an XSS payload in the header instead of the IP and the good old alert popped.
+Since we had XSS, we guessed that there must be an admin user we can attack with our exploit. So, we sent the same request as above to admin and the following header:
+The payload worked on our side but unfortunately, we did not receive any request from an admin.
+Another payload we tried showed us that there indeed is an admin user. 
+With the following payload, the admin user admin requests an image from our URL. 
+The only thing is that we cannot execute Javascript and exfiltrate data.
+With our URL as image source, we receive a request from the user admin.
+We tried various payloads and ideas but did not succeed.
+A colleague message us that the admin uses PhantomJS, as you can see in the user-agent, and PhantomJS does not support fetch. We should have tried the good old XMLHttpRequest. 
+Finally, we sent a request to the admin that loads more Javascript code via the XSS in the X-Forward-For header. 
+The loaded payload sends the cookies of the user back to us. Thus, we received the flag.",attack_execution
+27_Forbidden_Paths,web,"This website has the useful feature of reading any file we want it too, given its path.",overview
+27_Forbidden_Paths,web,"With file paths, a preceeding ./ means the current directory, and ../ means the enclosing directory.",analysis
+27_Forbidden_Paths,web,"Since we know that we are in /usr/share/nginx/html/, and want to access /flag.txt, we can just use the path ../../../../flag.txt to read the flag.",attack_execution
+28_Power_Cookie,web,"As suggested by the challenge name, the solution likely involves changing a cookie value.",overview
+28_Power_Cookie,web,"If we go to the website, we find that there are no cookies saved. However, if we click the continue as guest button, we see that a cookie with the name isAdmin is generated, with the value 0.",analysis
+28_Power_Cookie,web,"0 means false here, so if we change the cookie's value to 1 and refresh, the website treats us like the admin, giving us the flag.",attack_execution
+22_Web_Gauntlet_2,web,The challenge gives us a link which opens a webpage allowing us to login with a username and password that we can deduce are vulnerable to SQL injection. Looking at the filter link we can see what we must avoid when crafting our SQL injection.,overview
+22_Web_Gauntlet_2,web,"We know that the username field must be ""admin"" but unfortunately this is filtered. To bypass this we can simply use the ""||"" joiner with a final value for the username field of ""ad'||'min"".
+For the password field we must simply provide something that returns true. The most common one used is ""' OR '1'='1"" but OR is filtered as seen in the filter.php file. Instead we can craft a true statement using IS or IS NOT such as ""a' IS NOT 'b"" which is also true but does not use anything in the filter.php file.",analysis
+22_Web_Gauntlet_2,web,"Using the final values of username and password for login we get the message ""Congrats! You won! Check out filter.php"". Finally reloading the filter.php page gives us this source code with the flag.",attack_execution
+05_Some_Assembly_Required_1,web,"Upon visiting the website, it appears to just be a textbox with a form.",overview
+05_Some_Assembly_Required_1,web,"After inspecting the website, you can see there's a G82XCw5CX3.js file. I visited mercury.picoctf.net:55336/JIFxzHyW8W which consisted of this.
+The first time I looked at it I gave up in 5 seconds. Anyways, in the const declaration one of the elements caught my attention. './JIFxzHyW8W' is a path.",analysis
+05_Some_Assembly_Required_1,web,"I visited mercury.picoctf.net:55336/JIFxzHyW8W and it gave a WebAssembly file. At the bottom of the file, there was the flag.",attack_execution
+BigHug,web,"BitHug is a web app listening on port 1823 that lets you do basic version control with Git. 
+To do this, it uses the Git CLI to perform operations on repositories. 
+The goal of this challenge is to get access to a Git repository that you do not own, and to prove that you can do this, you have to clone a (normally inaccessible) repository under the name _/{your username}, with the flag in it.
+There’s a lot of things that you can explore with this challenge, here I’ll outline the important ones for our final exploit.",overview
+BigHug,web,"When starting on a CTF challenge, the first thing I do is to look for a destination. 
+Getting access to a repository that you don’t own should be impossible because the permission controls for repositories are very simple and on first glance, has no obvious problems. 
+However, there is a caveat in that if you make requests from a loopback IP address, you will be given essentially godmode powers so you can access any repository. 
+It’s clear here that our goal is to somehow make requests from a loopback IP address, hinting at some kind of server-side resource forgery (SSRF) exploit.
+git-receive-pack is the endpoint that is used by Git to perform remote operations on a repository. 
+In other words, when you git push, the CLI converts your changes into a pack and POSTs it to the server.
+BigHug has functionality that lets you specify POST webhooks that will be triggered when you make changes to a repository (more formally, it does this when it executed as git-receive-pack command). 
+You are able to provide it with a URL, content that you would like to POST to that URL as well as the Content-Type of the content. 
+The content that you provide is then put through a simple templating engine that allows you to inject certain attributes of the commit into your webhook. 
+I’ll go more in depth on this below where I explain how the exploit works.",analysis
+BigHug,web,"Repositories can be accessed by the creator of the repository or a list of people as defined in the access.conf file of the refs/meta/config commit of the repository. 
+This hints us toward us needing to somehow modify this file as part of our exploit.
+The main thing that we will be exploiting is how webhooks are processed and sent. 
+Webhooks are a SSRF vector, and in theory we can make a webhook that POSTs a git-receive-pack that adds our user to the access.conf file. 
+However, this exploit won’t work since the server sanitizes our webhooks and only allows you to make webhooks that request to port 80. 
+It does this by parsing our URL using the URL class.
+However, when actually executing the webhook, there is an exploit that allows us to bypass this. 
+Below is the source code for the git-receive-pack endpoint.
+The formatString() function is defined as:
+So it will replace all {{attr}} in a string with options[attr].
+The important part of this is const url = formatString(webhook.url, options);. 
+This is a template injection vulnerability that allows us to enter a URL like http://{{ref}}.com, and then inject a ref that points to 127.0.0.1:1823/_/admin.git/git-receive-pack?a to bypass the port check since it only happens when the webhook is created.
+Surprisingly enough, Node.js URL will actually accept http://{{ref}}.com as valid and parses it accordingly.
+The final url would be http://127.0.0.1:1823/_/admin.git/git-receive-pack?a.com, with the webserver ignoring the query string.
+Now all we need to do is to somehow inject a string into the ref of a git-receive-pack. 
+We can look at how the ref is parsed in the receivePackPost function.
+This parsing is just basic string splitting so it should be easily exploitable.
+Given all of this the full exploit should be the following:
+Create a webhook with URL http://{{ref}}.com, Content-Type: application/x-git-receive-pack-request and the content of a git-receive-pack that commits our user account to the access.conf of the refs/meta/config.
+Trigger the webhook with a commit ref being 127.0.0.1:1823/_/admin.git/git-receive-pack?a.
+The hard part of this challenge is figuring out how to properly execute this exploit. 
+There is very little documentation on the git-receive-pack format and it seems nontrivial to figure out what the format actually is.
+Instead of figuring out how the format works, we can instead simply use the Git CLI to try making commits and reading the requests that it makes. 
+Most people would go straight to Wireshark for this purpose, but for the sake of simplicity I instead chose to modify the source code of the app and simply log out the hex of the request body directly.
+After doing this, we can make any commit to the repository and push it. Then we can take the raw body and replace the ref with our payload. I chose to make a very long branch name to make it easier to edit the raw data using a hex editor.
+My final payload looked like the following:
+Of course, depending on what you commit yours might look different.
+Next, we can follow the instructions on the website and use the same method discussed above to generate the git-receive-pack that includes a commit to access.conf to add our own user.
+My payload looked like this.
+Now that we have our payloads in place, we can make a short script to automate the exploit. 
+We first make the webhook with the template injection URL and payload for adding us to the repository and then we trigger that webhook with the ref injection.
+Now, we can just visit _/admin on the web interface and you should be able to read the flag.",attack_execution
+21_Some_Assembly_Required_3,web,"Upon visiting the website, it appears to just be a textbox with a form.",overview
+21_Some_Assembly_Required_3,web,"After inspecting the website, you can see there's a G82XCw5CX3.js file. I visited mercury.picoctf.net:55336/JIFxzHyW8W which consisted of this.
+The first time I looked at it I gave up in 5 seconds. Anyways, in the const declaration one of the elements caught my attention. './JIFxzHyW8W' is a path.
+I visited mercury.picoctf.net:55336/JIFxzHyW8W and it gave a WebAssembly file.
+I translate the wasm file to wat and analyze the result.
+Now I translate to pseudo-code and analyze the result.
+We can see that check_flag stayed pretty much the same as last time, so we can assume that the magic happens in copy. If we diff it against the original implementation (which simply stored the provided flag characters in memory without any extra manipulation) we can see that this version includes some extra logic:
+Notice that e[2] comes from b which is the index of the character, and e[3] comes from a which is a user input character. We can also see that this implementation is using an extra array defined at offset 1067+:",analysis
+21_Some_Assembly_Required_3,web,"Translating this logic to Python, we get:
+Now we can add the array defined at 1024+ and brute force the flag.",attack_execution
+11_Who_are_you,web,"When we visit the site, it says
+Only people who use the official PicoBrowser are allowed on this site!",overview
+11_Who_are_you,web,"There are many ways to approach this (some alternatives are curl and burp suite) but I ended up using Postman's HTTP request. We'll unhide requests and override the default User-Agent request with a PicoBrowser agent.
+Now, we need to make the header show it's from the same site. We'll use a key of Referer with a value of the site
+We'll use the Date header with any value from 2018, for example ""1 Jan 2018""
+We can set DNT which is ""do not track"" to 1 (true).
+We can use the X-Forwarded-For which will change the originating IP address. Grab any random IP address from Sweden like 12.16.66.01
+We can use the Accept-Language header to specify which languages are ok. We can look through a list of languages and find Sweden's subtag is sv.",analysis
+12_login,web,"On first inspection, when faced with a login screen, it seems like SQL injection, because isn’t that what always happens with logins in CTFs?",overview
+12_login,web,"However, it’s a lot simpler than that. After navigating to website source, we encounter index.js. Upon pretty-printing, it’s just vanilla JS.
+The important part of the code is in line 12, where it’s checking for a username and password that has been turned into Base64 from ASCII via the btoa() method, which is reversible with the atob() method. The password itself is the flag when decoded. Opening the console and undoing the encoding, shown below, results in the flag.",analysis
+12_login,web,"If you’re not convinced it’s the real flag, you can decode the username (admin) and input both into the login form, which results in an alert announcing the flag.",attack_execution
+02_Spookifier,web,"Navigating to website, we are presented with the following page.
+On giving an input, it is sent through get parameter and it reponds with same input with different font styles.",overview
+02_Spookifier,web,"Looking into the source code reveals that it’s a flask app and using mako template engine for rendering. On line 11, the user input is passed into the spoofiky function and it’s output is passed into the template.
+Tracing the spookify function, it passes the text onto change_font function which just maps the text characters againts different font dictionaries.
+One font dictionary does not have any unique character for mapping.
+Since, the user input is directly passed into the template with any sanitization, this introduces the Server Side Template Injection (SSTI).
+We confirm it by using the following payload and it sucessfully evaluates it.",analysis
+02_Spookifier,web,"Then using the following payload, we can run commands on the system and read our flag.",attack_execution
+25_Web_Gauntlet,web,"In this challenge, we are linked to a login form we are meant to bypass with SQL injection. At each level the filter changes, so we have to update your injection as necessary.",overview
+25_Web_Gauntlet,web,"Level 1 - filter: or
+Use basic injection and comment out the rest of the line.
+Level 2 - filter: or and like = –
+Without --, check for other ways to comment. We can also use UNION to get our specific user.
+Level 3 - filter: or and = like > < –
+The first injection from the previous round still works here, but let’s try to get the second to work too. Spaces are now blocked, but we can use /**/ comments for the same effect. I tried %20 to replace all the spaces, but it was not effective.
+Level 4 - filter: or and = like > < – admin
+In SQLITE, || is a concatenation operator. The simple solution is to simply split up “admin” in a way to bypass the filter. A more complicated solution could include encoding encode “admin” in ASCII number code and using the SQL CHAR() function to decode it.
+Level 5 - filter: or and = like > < – union admin
+Splitting up “admin” still works as only UNION is additionally blacklisted.",analysis
+Homework,web,"When following the link, we get an ERR_UNSAFE_PORT.",overview
+Homework,web,"A bit of googling shows that port 6666 is unsafe and must manually be allowed. In Chrome, this is possible via the option —explicitly-allowed-ports=6666 , in Firefox we can add the option network.security.ports.banned.override with the value 6666 in about:config.
+Afterwards, we can see a homepage with one input field to enter our homework.
+The webpage has one input field.
+If we enter Markdown or HTML it would render it as HMTL.
+The result of the rendered homepage.
+We soon found out that it was rendered with Pandoc as it stands in the webpage source and that we could enter an external source to be contained in the rendered output. For instance, if we submit a script tag with our controlled URL, we could see the content of the URL in the response from the server. This means, the request takes place on the server and not on the client. The Pandoc documentation refers to this as the — self-containedoption.
+We can see the Hello World content of our URL loaded in the response from the server.",analysis
+Homework,web,"Knowing this, we tried to load local files with the file:// scheme. However, the server would always respond with an error.
+This was until randomly, a colleague tried to add the type attribute type=""text/plain"" and got a result. Together with this attribute and the correct source, we were able to exfiltrate /etc/passwd.
+From here, we looked at /proc/self/environto list the environment variables.
+From the environment variables, we can see some interesting directories to search for the flag. Finally, the flag was in /app/flag.",attack_execution
+Notepad,web,"The application is a simple note-taking site. When a new note is created, a file in the static folder is created, and the client is redirected to the file.",overview
+Notepad,web,"We were provided a source so I checked that out. I first noticed the filters on the note’s content.
+The filter on / indicates that path traversal should be prevented. However, the created file’s name looks odd.
+The filename is the first 128 characters of the content and a random token. 
+It’s a bit weird that they’re normalizing the path with url_fix(content[:128]); that’s our first vulnerability. 
+Even though / is filtered, \ is not, and url_fix() would normalize the backslashes to be /. We could use this to traverse the filesystem.
+Arbitrary Template Creation
+Remember that error from the filter on content? That comes in handy now. On the index page, the error can be set to any arbitrary value by simply passing in another value to the error query parameter:
+This value is then used as the filename for a Jinja template in the errors subdirectory.
+How is this useful? Well, we can create our own error template by using our path traversal technique to create a file in the templates/errors folder. 
+This new template can then be rendered on the index page if we pass it in as a query parameter.",analysis
+Notepad,web,"We can test a sample payload now:
+If we paste that into the text area on the index page and submit, we get redirected to a Not Found error page. 
+Not to worry! Since we wrote to a file outside of the static folder, we can’t access it from /static/..., which resulted in the 404. 
+However, we can check out our payload by passing our filename (minus extension) into error. 
+The path I got redirected to was /templates/errors/-lww21e3EmpA.html so I went to.
+Lo and behold, our payload was printed back to us!
+Since the error page is included as a Jinja template and not as a static page, we can utilize a server-side template injection to retrieve the flag. 
+I found a great reference that detailed how to implement a SSTI with the Jinja template engine.
+After the path of the errors folder, I padded the payload with a characters so that none of the injection was stored in the filename. 
+While this is optional, I found that it made the request much cleaner because the filename isn’t url encoded.
+The next step is to find the string class. 
+This is usually done with ''.__class__ but because of the filter on underscores, we can’t insert __class__ directly into the content parameter. 
+We can, however, insert it into a different query parameter and reference it that way. 
+We can then get the string class’s method resolution order using mro().
+The second class in the string class’s MRO is the object class so we can index to 1.
+If we call object.__subclasses__(), we can access all the classes that are available. 
+Since underscores are filtered, we can access the function the same way we accessed __class__. 
+Our full payload is now:
+When we access the index page with the filename passed into error, we get an internal server error. 
+This is because we didn’t pass in the class or subclasses query parameters. 
+After setting them to __class__ and __subclasses__, respectively, a whole bunch of stuff is rendered.
+Nice! We got a whole bunch of classes from that. 
+The most important of those is subprocess.Popen. 
+To find the index of that class more easily, I pasted the stringified list into a Python shell (as a string), split the list on , , and called l.index("" <class 'subprocess.Popen'>"") to find that the subprocess.Popen class is at index 273. 
+That means that we can create a new Popen object to execute some pretty useful commands.
+The provided Dockerfile showed that the flag is located in the app’s root directory with a random UUID appended to it. 
+Therefore, we need to find the flag’s filename; we can ls the root directory and return the result with this injection:
+The flag’s filename is flag-c8f5526c-4122-4578-96de-d7dd27193798.txt. Last but not least, we can cat the flag.",attack_execution
+Authentication,web,We can see a login page with the goal to log in as admin.,overview
+Authentication,web,"Of course, we could try various SQLi techniques, but here, already the first SQLi textbook exploit works: ‘ OR 1==1-- as username logs us in as admin.",analysis
+Authentication,web,"On the webpage, we don’t see a flag so we open the source code of the page with ctrl-u and find the flag as a hidden field at the bottom of the page.",attack_execution
+Note,web,"After browsing the site for few minutes, I realised that you can inject html code while creating new notes.",overview
+Note,web,"The source code was available to download. 
+Let's look at what's going on in the backend. 
+web.js has all the endpoints and the server is run internally on localhost:8080. 
+However the most interesting part is report.js which handles the /report endpoint. 
+Let's look at its code.
+Couple of things to notice here:
+It's a puppeteer bot.
+It is a headless, no-sandbox chromium browser (it's infamous of lax security).
+The bot creates a new account with completely random username and password. 
+Creates a new note with content as process.env.flag i. e the flag. 
+The bot in the end opens the url we provide on the /reports page.
+The ideal plan would be to read the contents of ""My notes"" of the bot account which includes the flag. 
+I had several ideas like use fetch API to login to a test account and create a note with contents from the bot account but the csrf library used was making it very tricky to do that. 
+After some manual testing I figured that you can access internet through the puppeteer bot.
+Now this opens a lot of possibilities. 
+I can make a get request containing the ""My Notes"" contents as an argument.",analysis
+Note,web,"So, my plan is simple. I will create an account on main servers with credentials a:a.
+Then, I will created a script that will access webhook.site url with body contents of a particular window named ""pwn"" (This will be created later). Let's have a look at the script.
+I added a clause to check for ?pwn in the url because without it the website was crashing since it was redirecting every time you accessed notes. Now, let's go ahead and plant it.
+Now, it is time for the main script. 
+The one that goes into the /report page, into the url field.
+Here I want to do three things inside puppeteer in a sequence. 
+Open a new window named ""pwn"" with url http://localhost/notes. 
+This will open the ""My notes"" page as bot account. Which has the flag.
+Login in to our test account with credentials a:a.
+Go to /notes?pwn after logging in which will capture the contents of ""pwn"" window automatically due to xss.
+That's it. That should do it. Now let's have a look at the code. 
+Chrome tells that the contents are html. 
+Next, we create a form with action as the local login page and pre-enter the credentials as values in the input fields. 
+Next we execute our sequence inside a script tag. 
+We open a window named ""pwn"" with notes url (This has our flag in body). 
+Then we wait 1 second and submit our login form. 
+After we are logged in as ""a:a"" we then open /notes?pwn after 1.5 seconds which will trigger our XSS and steal the contents from the ""pwn"" tag which still has body from the bot account (and the flag).
+We'll go ahead and first get this script in one line and then enter it into the ""url"" section of /report.
+Now we wait for 2.5 seconds and we get the flag!",attack_execution
+15_Local_Authority,web,"When you go to the website, you find the following login screen:",overview
+15_Local_Authority,web,"To find out more about the inner workings of the website, we look at the source code (right-click on the page) and find the following:
+Nothing visible at first sight. We dive deeper and look at the files style.css and login.php. There is nothing special in style.css, so we focus on login.php:
+Three further files are referenced in this document: style.css, admin.php and secure.js, and there is some JavaScript code included in the website directly (starting in line 19 with <script type=""text/javascript"">.
+The function filter obviously checks if the entered field contains only allowed letters. The JavaScript code following the function definition reads the entered values and passes them on to a function called checkPassword() which is not defined in this document. Since we are looking for JavaScript code, we look into secure.js first and find the following:",analysis
+15_Local_Authority,web,"Okay, that was not difficult. The login credentials for the website are
+If we copy the password, go back to the login screen, enter the password together with the username admin, we get the flag:",attack_execution
+03_modernblog,web,"Look at the Admin Bot, we can definitely that this is client-side challenge. The source is React + Express backend, and most of the code is used for credentials management, and content management (creating, view blog content). The point is there are blog of admin containing the flag, with a randomId.
+Since we can view any post given the id known (or the access link), the point is to get the flagId, or admin account takeover. And, as I state, this is a client-side challenge, so we have to take a look at the client side code to see where the vulnerability occurs: it is the body of a post
+Let's move to the analysis phase to see how could we exploit this spot",overview
+03_modernblog,web,"The first thing I can think of is XSS to account take over. However, as the comment says, there is CSP set at server.
+According to the CSP, there is no room for our custom script to run on the website, which means the account takeover approach is impossible.
+At this point, there is only 1 option left: get the flagId of the admin post, which is in /home page of admin user!
+However, it does not directly HTML encode special characters, so we still can inject markup, HTML, CSS. But what we can do with this? What about CSS Injection / XS-leak? We can inject CSS into the post body, but it will execute on post page, while the flagId is in the /home page. So, what else we can do with HTML and CSS?
+Just hold down a little bit. Although we can't execute our custom script, is that means we have no control over JS execution of the web? The answer is NO! We can do that with DOM clobbering attack.
+DOM clobbering is a well-known attack to change a value of window properties. For example:
+However, reading the author writeup, I now know that DOM clobbering is only able to the the value of window properties, but also document properties! The key point is here
+So, the first point tells us that for any exposed embed, form, iframe, img, or exposed object element, the value of the “name” attribute will be a property of the Document object.
+Okay, but how to use this technique to solve the modernblog challenge? To use this, we need to answer a critical question:
+What property needed to be changed in order to change behavior of the modernblog web app?
+To figure out that property, we need to understand the how the web app works in depth. And, it will lead us to me to React Router!
+At the main.jsx file, we can see this application is route using the BrowserRouter. It actually a single page application, and it will choose which page to render based the path property.
+Take a look at BrowserRouter doc, there is a line worth noticing
+<BrowserRouter window> defaults to using the current document's defaultView, but it may also be used to track changes to another window's URL, in an <iframe>
+That is, document.defaultView, right?
+The doc also state that BrowserRouter ""browse using the built-in history stack"", so taking a look at the History API can help us confirm whether document.defaultView is what we are looking for. And it is!
+At this point, we know that the key point of this challenge is the document.defaultView property. Let's test DOM clobbering payload at the modernblog website whether it work or not.
+Isn't that magic. It clobbered! With that, we can now open the /home page, and perform CSS Injection to leak the flagId!
+But, how to make the createBrowserHistory run again? If not so, there is no /home page loaded, hence no bit leaked.
+The createBrowserHistory only run when the application load, but we can't make the modernblog web reload. Even if we could do, we would not like to do this as our payload will go!
+That go to a super cool idea of this challenge: create a React app inside a React app",analysis
+03_modernblog,web,"We can use the srcdoc attribute of the iframe tag to create another React app, using the provided public JS file. Let's try it:
+We get an error, as it fails to change document.defaultview.History while it is currently pointing to the current window int about:srcdoc. But, if we combine if React gadget, we got the following:",attack_execution
+03_modernblog,web,"The text color is red, and the content is exactly of the /home page. We finally reach the point! Load the /home page, inject CSS to leak the flagId bit by bit to get the flag!!!!!!!!!",analysis
+03_modernblog,web,"Based on the above analysis, we now can use classical CSS techniques to leak the flagId. Using the script generated by the python code below, then create a blog whose body of it, and get each character of flagId at webhook:
+Attempt 12 times to get the full flagId, and the flag!",attack_execution
+LiveArt,web,"Exploring the website doesn’t reveal too much. 
+It’s pretty clear that the /link-submission page is intended for you to submit a link that will be “clicked-on” by a “victim” (In this case the victim is a headless browser, but that’s largely irrelevant here).",overview
+LiveArt,web,"Looking closer at what happens when you submit a link (this is in the code directory under “server”), we learn that the flag we are looking for is stored in the browser’s local storage for the live-art website, under the key ""username"". 
+All we have to do is figure out how to leak that information from a client that clicks on our link.
+We can provide the “victim” a link. That means we are fundamentally in control of one thing: a URL. 
+We start out wondering if there’s anything on the website where the url has a direct impact on the rendered HTML (or javascript). 
+It doesn’t take long for us to find the /error route, which is backed by this ErrorPage component.
+In particular the useHashParams function stands out to us. 
+Whatever that function returns influences a link and the content of an h3 block. So, what does useHashParams do?
+Aha! This is interesting. There’s some state being stored inside React, and that state is an object constructed by iterating through the hash parameters and storing the key/value pairs. This means that navigating to a url like /error#returnTo=/foo&error=Error%20Message will give us a page containing an <h3> “Error Message” and a link to the page /foo (try it!). However, React is very good about escaping these inputs, so it’s not directly vulnerable to XSS. We can inject a ""javascript:"" link, but we can’t actually get the headless browser to click it, so it’s not directly helpful to us.
+We do notice that is a suspicious loop, and we initially wondered if it might be vulnerable to a prototype pollution vulnerability, but it didn’t seem like it after some testing.
+This ErrorPage component was the only obvious “source” for us to inject content in the URL and have it end up influencing the DOM / javascript. 
+We also looked into the “live-art” broadcast feature, but the incoming data from peers was only used to influence an <img> src data, so it didn’t seem possible to inject javascript that way.
+We take a break from looking at sources and try to find sinks - these are places where javascript variables might end up affecting the dom. 
+In particular we’re interested in being able to directly inject html elements (like <script>), or possibly some element attributes (onload, onerror and the like). 
+One of the most common ways this might happen is the use of the ... spread operator, as that could unintentionally include unintended state.
+Let’s grep for it:
+Hmmm… It’s a reducer with an initial value of baseResolution and some logic adjusting width/height. 
+In general it seems that it only ever works with the width and height properties, so it’s not obvious how we could inject a more interesting attribute, like the classic onerror attribute often used on img tags for XSS.
+The javascript on the live website has been bundled/minimized and doesn’t lend itself to debugging. 
+Fortunately we have the source code, but not really any instructions on how to use it. 
+Since we’re only interested in the client code right now, let’s try and host that code ourselves, hopefully with source maps for ease of debugging. 
+To do that, we’ll whip up a Dockerfile, based largely on the one they gave us for the noted challenge.
+This Dockerfile contains some unnecessary components (we need puppeteer for the server project, but not client).
+In any case, it’s good enough for now. Build it with the tag picoctf2022-liveart and run it like this.
+This will give us a development server running on port 3000. 
+Loading it up, we are again greeted with the live-art website, but this time dev-tools has working source maps, and we can even use breakpoints.
+At this point we’re a bit out of ideas. We have a source (the ErrorPage component), and a sink (the Viewer component), but individually they appear benign. 
+We load up the development server and start poking around for something we missed.
+After poking around for a bit, we stumble across the Drawing component. 
+This component appears to reference both an ErrorPage component and a Viewer component. 
+It’s used if you go to a valid /drawing route, such as /drawing/abcd. 
+The logic seems to be that if the window is too small then the error component is used, and if the windows is large enough then the viewer component is used. 
+The use of these two components together on the same page is setting off alarm bells in our heads, but how can we exploit it?
+One thing we notice is that if we’re on the /drawing/abcd page and we resize the window small enough, the javascript console starts spitting out error messages. 
+This is something we didn’t see on the release version of the website, so it must be something to do with the fact that we’re now using React in “developer” mode. 
+At this point we’re pretty sure we’ve found the vulnerability. But what is it?
+Since we know the ErrorPage component will read from hash parameters, let’s load up the drawing route in a window that is really small, so that it starts with an ErrorPage component. 
+Navigating to /drawing/abcd#error=abcd with the window small doesn’t initially seem to do anything. 
+It doesn’t even override the displayed error message. 
+However, if we now resize the window so that it’s large, something interesting happens.
+In addition to the error message in the javascript console, inspecting the DOM now reveals this element:
+Aha! That state that the ErrorPage component uses must be getting re-used in the wrong context. 
+It replaces the dimensions variable in the Viewer component, allowing us to inject attributes on the <img> tag.
+Let’s try that again, but this time with /drawing/abcd#src=1&onerror=alert(1). 
+Remember, the window has to start out small and then be resized larger.
+Unfortunately, that doesn’t work.
+React is pretty specific about it’s handlers. 
+In general it expects you to provide things the “React” way rather than using raw javascript. 
+It even requires the onError attribute to be a function and not a string, so simply adjusting the case in our URL doesn’t help. 
+We start banging our heads against the wall, since we’re so close to cracking this thing.
+Desperately researching React XSS vulnerabilities, we come across this article from a 2021 CTF writeup. 
+It reveals the secret: if your object has an ""is"" property, then react will treat the whole thing as a WebComponent and pass the attributes straight through. 
+Let’s try it out: /drawing/abcd#src=1&onerror=alert(1)&is (remember, start with the window small and then resize it so that it’s larger).
+Success - we are greeted with an alert popup!",analysis
+LiveArt,web,"We can now execute javascript on the page.
+All that’s left to do is weaponize this. 
+We’ll load up the drawing route in a small iframe with our XSS payload in the hash parameters. 
+We’ll then resize the iframe to trigger the vulnerability. 
+All our payload has to do is read from localstorage and send it to our server.
+We can now host our payload with a simple http server using python3 -m http.server and then make it publicly accessible using ngrok http 8000. 
+This will give us an http/https server on a .ngrok.io subdomain that we can put into the link-submission form. 
+I tried using other ports and they were blocked, so I believe the challenge only supports connecting to servers on either port 80 or 443.
+As we can see here, the XSS worked, and about 1 second after the request for our xss payload we get another request containing the flag!",attack_execution
+01_Evaluation_Deck,web,"Navigating to the challenge website, it presents the following page which list cards.
+On selecting a card, the HP of ghost increases of decrease depending on the points and operator.
+However, nothing happens on the victory.",overview
+01_Evaluation_Deck,web,"Intercepting the requests with burpsuite, when selecting a card, post request is sent to /api/get_health endpoint with three parameters as shown below.
+In response, remaining health is sent.
+Looking into the source code, the three POST parameters are directly passed into the compile function which creates code format for exec function. The exec function in python allows to execute arbitrary python code. So, the lack of input validation means we can inject arbitrary code in this function and execute it.",analysis
+01_Evaluation_Deck,web,"Since, current_health and attack_power are passed into int function, injecting code into them will cause issue. But, the operator parameter is directly passed as string so we can use it.
+We can confirm this by commenting the attack_power parameter. Basically the following payload will look like this:
+100 - 100# 34
+So, we can inject code before the comment.
+Start the ngrok proxy which forward requests to local port 8080.
+Start listening on port 8080 to receive connection.
+Injection the following payload gives a reverse shell on the challenge container.
+The flag is placed at the root.",attack_execution
+JavaScriptKiddie,web,The image link appears broken.,overview
+JavaScriptKiddie,web,"Looking at the source code of the website, we see a script that seems to be constructing our image by manipulating some values in an array named ""bytes"", and our input, otherwise called key in the code.
+We get the bytes array through the browser console.
+The script seems to be doing:
+Use the input as the key
+For each number in the key, convert the string to the actual number(char()-48), store it in variable i.
+Get the byte value for the resultant PNG at position (i , j), by the following formula.
+Remove all trailing zeros from the file.
+Use the result as the source for the PNG displayed on the page.
+Looking at the file signature for a PNG file, we see that the first 8 bytes of the file have to be 89 50 4E 47 0D 0A 1A 0A, and the trailing 8 bytes have to be 49 45 4E 44 AE 42 60 82.",analysis
+JavaScriptKiddie,web,"We can thus write a python script to find us possible values for the first 8 digits of the key using the header, and the last 8 digits using the trailer, giving us the final key.
+This gives us the first 8 digits.
+For the last 8 digits, the actual result might include a bunch of 0s at the end, instead of the actual trailer, as we see that the javascript script actually does work to remove these just before the image is used as a source. 
+We thus try our luck with the ending being 00 00 00 00 00 00 00 00 first, as we notice multiple 0s in the bytes array, leading us to believe that some of these might actually be at the end. 
+We get a list of possible numbers for the last 8 digits of the key with this script.
+We then use the following to iterate through the combination possibilities.
+We use the command pngcheck output*, and notice that output0 gives OK. 
+We open it and see a qr code, whcih we use zbarimg to decode to get the flag.",attack_execution
+01_Pirate_birthday_planner,web,The portion of code to check if a user is authorized in the party is done in this middleware,overview
+01_Pirate_birthday_planner,web,"The query is vulnerable to noSQL injection, but we need to set both session.user and session.pin to a js object controlled by us.
+The session is stored in a cookie created with the cookie-session library and it needs a signature with a random key, so we should find a way to get it from the server.
+When using the app in the intended way the browser sends the requested data with Content-Type: application/x-www-form-urlencoded. However, the server also loads a middleware to interpret the application/json content type.",analysis
+01_Pirate_birthday_planner,web,"Thanks to it we can send data as json, injecting objects inside the input parameters of the server.
+Our first try was the /new endpoint
+Here we confirmed that it’s possible to set as a pin an object like {""$ne"":""a""} and bypass the check.",attack_execution
+01_Pirate_birthday_planner,web,"However, this endpoint calls the trim() function on the user parameter making it unusable for the exploitation.
+We need to set both session.user and session.pin to an object to bypass the checks.
+We used two sessions in parallel to get the exploit working, a legit session and a session for the payload.
+First we create a party in the legit session with valid values.
+Then, in the other session, we create a party sending the admin parameter equal to the object {""$ne"":""a""}. The creation of the party will fail, but the session values are updated anyway, in this way we set session.user to the bypass object.
+However, we have a random value in session.pin, but we can’t change it because the corresponding party doesn’t exists in the server.
+To solve this problem we set the pin of the legit party equal to the one in the payload session.",analysis
+01_Pirate_birthday_planner,web,"With the user bypass and the right pin the payload session will pass the checks for the legit party.
+In the last step we use the payload session to change again the pin of the legit party with a bypass object.
+Now the payload session can bypass the checks for all the parties in the server, we just need to collect all the flags from the /detail endpoint and reverse the xor.",attack_execution
+02_Cookies,web,"We visit the website and see the following message:
+Welcome to my cookie search page. See how much I like different kinds of cookies!",overview
+02_Cookies,web,"Let's check the cookie we get from the server:
+What if we try to access with a different cookie name?",analysis
+02_Cookies,web,Let's search for that special cookie by trying different numbers:,attack_execution
+29_Roboto_Sans,web,"The challenge name seems to be either an allusion to the text font Roboto or /robots.txt.
+As investigating the text font files seems more complicated, let's first look at /robots.txt.",overview
+29_Roboto_Sans,web,"The text in here disallow looks suspicious.
+The double equal sign suggests that it's base 64. However, if we try to decode it with an online decoder, it seems like the base 64 is a little malformed. As the base 64 text spans across three lines, it suggests that it is actually three separate strings.",analysis
+29_Roboto_Sans,web,"If we decode each line separately, we find that the second line gives us a valid path, specifically js/myfile.txt. If we navigate to the suburl, we get the flag.",attack_execution
+31_SQL_Direct,web,"Let's connect to the PostgreSQL.
+Now, Let's run /dt to list the tables of the public schema.
+Now let's run select command from flags table on public schema.
+And we get the flag.",attack_execution
+26_Some_Assembly_Required_4,web,"This is the final WebAssembly challenge. The process that I used to solve this challenge can also be applied to all the other ones as well, so I’ll just outline how I solved this one.
+I’m not very good at reverse engineering, and only have a very rudimentary understanding of WASM in general so I’m sure there’s a better way to go about this.",overview
+26_Some_Assembly_Required_4,web,"The basic flow of the challenge is that you enter in a flag and it checks if its the correct flag.
+The JavaScript on the page interacts with a WASM program by first copying over each character in the flag into memory using the copy_char() function. Afterward, it calls check_flag() and receives a boolean, depending on whether the flag was valid or not.
+Reverse Engineering
+Google Chrome has one of the best tooling suites ever. This extends to WASM, where there is a debugger that disassembles the compiled WASM binaries into WebAssembly Text Format (WAT) and allows you to add breakpoints wherever you want. Thus the process of vaguely figuring out how it works is quite simple: all you need to do is to put breakpoints where you think something happens and you can inspect local variables at that breakpoint.
+My process was even more simple. I was able to identify that the code was looping through the entered value (by putting in picoCTF{ as a prefix and putting random characters afterward) and returning when a character didn’t match. For this specific challenge, it compares two characters at a time, in contrast to the previous challenge which only compared one at a time.
+(Smart) Brute Force
+The fact that this is a short circuit allows us to do a side channel attack on the checking process. To speed this up, we can add snippets of code that increments a counter whenever you get a character correct and resets that counter whenever you call the function. Knowing how many characters we got correct allows us to brute force the flag two characters at a time.
+You can see now how this now reduces to brute forcing two characters at a time, since we can start with guessing the first two. After we know those two characters are correct, we can guess the next two, then the next two… until we get to the end.
+The only issue now is how we’ll add the code in. I don’t know how to write WebAssembly at all, and learning it seemed to be quite a steep curve. Instead of writing the WASM code myself, I found that you can compile C to WASM and then just copy those code snippets. I used WasmFiddle for this purpose.
+The part that declares the memory location for the global variable is (data (i32.const 16) ""\00""), and its clear that the offset of this memory location is 16. We can change this to whatever we want as long as we change the appropriate offsets in the rest of the code.
+We also want to reset the global variable between runs, so I also compiled a snippet that set the variable to 0.
+I identified a suitable location to add the code snippets, which is right after a eq operation in the program. Using the information gained from putting a breakpoint there, I could tell that the inserted code would only run if the character matched.
+Since the WASM code is really long, I’ve uploaded them as files. You can see the final patched WAT file here and the diff between the original and patched here, I used an offset location of 3000 in my patch. I used the WebAssembly Binary Toolkit (WABT) to disassemble and reassemble the original binary.",analysis
+26_Some_Assembly_Required_4,web,"Using this, I was able to write a quick Node.js script that would brute force the characters. I’ve cleaned it up a bit and added comments for a bit of clarity.",attack_execution
+26_Some_Assembly_Required_4,web,"Not being great at reverse engineering was for me a blessing, because otherwise I would have spent a lot of time and effort attempting to understand what the code was actually doing. Not being familiar with it gave me a different perspective, which allowed me to conceptualize a much easier solution to the challenge. I think this challenge was quite interesting, if not a bit misplaced given that it had very little to do with Web Exploitation.",analysis
+30_Secrets,web,"If we right click -> inspect and look at the sources tab, we find that some of the assets are in a suspiciously named folder called ""secret"".
+If we navigate to the secret suburl, we find a website that says ""Finally. You almost found me. you are doing well"".
+We are on the right track. If we repeat the same process as before, we find that there is another suspiciously named folder, ""hidden"", so we navigate to it. 
+We keep on repeating this process until we reach a website that says ""Finally. You found me. But can you see me"".",analysis
+30_Secrets,web,The flag is probably hidden by the css. We can just look at the HTML source to get the flag.,attack_execution
+03_Horror Feeds,web,"Starting the challenge container, we are presented with the following login page which also presents option to register.
+Registering the new user and logging in, on the home page it shows spooky CCTV footage as told in the challenge description. There’s nothing more.",overview
+03_Horror Feeds,web,"Looking into the provided zip file, there’s the docker startup script which creates the users table and add the admin user entry. The password is hashed.
+Next, the flag is loaded in the flag attribute of config class.
+Then, this flag and authenticated username is passed into the dashboard template. But, we saw the dashboard after but there was no flag.
+The reason is that there’s a condition in the template that flag will ony be rendered when admin logs into the dashboard.
+This means that we need to be admin to get the flag.
+Looking in the register function, the username is directly passed to the SQL query without any sanitization. This introduces the SQL injection. First query on line 30 doesn’t concerns us because the passwords are hashed and we already have hash of admin password but it’s of no use. But the second query of line 36 is interesting.
+Since, this an insert query and there’s no input validation, we can use it to change the admin’s password hash to our own generated hash.
+This can be done by using the ON DUPLICATE KEY UPDATE which is an extension to insert statement that, if it finds a duplicate unique or primary key, it will instead perform an update.
+So, the logic is to try to add admin user which we know already exists in the table, so on duplicate key, we can change it’s hash. You can read more about it on the following page:
+The application uses bcrypt with 12 rounds to hash the password. So, first we generate a new hash of our own password.",analysis
+03_Horror Feeds,web,"Next, we just inject the following payload into the username parameter and it will change the admin password hash.
+After adding payload the query will look like this:
+Then, we just login into the dashboard using the password that we just set and get the flag.",attack_execution
+Lightweight,web,"In this challenge, we have an LDAP injection as the challenge description already gives us the hint.",overview
+Lightweight,web,"Thus, on the login page, we first tried some LDAP injection payload which results in some nice PHP error messages.
+A closing bracket breaks the LDAP filter.",attack_execution
+Lightweight,web,"We can see that the closing bracket breaks the LDAP filter, thus we can probably inject more filters.
+Furthermore, when we click in Our team the webpage tells us that they have four users, three developers and one admin.
+The webpage has three developers and one admin
+After some tries with the given emails and other input, we came to the conclusion that we can get three outputs:
+An error message “No such user !” when the request was correct, but LDAP found no user with our given filter. For example, email foo@bar.de cannot be found.
+An error message “Invalid username/password !” when the request was correct and LDAP found the user, but our password was not correct. For example, email jdoe@dvctf.local works fine.
+An error message “Invalid username/password !” plus the PHP error messages when the request was broken. For example the closing bracket.",analysis
+Lightweight,web,"At this point, we injected a new filter into the LDAP request and brute forced the description of the users as a proof of concept.
+The injected filter returns “Invalid username/password !” since the user was found with this filter but the password was incorrect.
+In the example below, I use the Burp Intruder to try all possibilities for description, one by one. You can see, that I previously found the description sysa and the request shows me that the next letter is d. In the end, the description will be sysadmin.
+After the brute force attempt worked fine for description, we tried the same with userPassword as it is the standard password key for LDAP. 
+With * the request worked fine, however, no character we tried resulted in “Invalid username/password !” but only “No such user !”.",attack_execution
+Lightweight,web,"Searching on the internet for brute force methods against LDAP’s userPassword led us to another writeup with exactly the same problem.
+The userPassword is an octet string and thus cannot be brute-forced the same way as a normal string. 
+However, we can use other operators on the userPassword, for instance, octetStringOrderingMatch. 
+To do so, we only need to add the OID of octetStringOrderingMatch 2.5.13.18 behind userPassword and can brute-force byte values, like in the payload below.",analysis
+Lightweight,web,"Finally, after bruteforcing the password hash, we have the base64 of the MD5 hash.
+Submitting this hash to https://crackstation.net/, we receive the password Chicken123.
+Now we can log in as the mkiloa@dvctf.local see the flag.",attack_execution
+03_Insp3ct0r,web,"Visiting the website, we right click and choose to view source code, getting the first third of the flag, included as a html comment:
+The second part of the flag comes from the referenced CSS file mycss.cs:
+The last part comes from the Javascript scipt myjs.js:",analysis
+03_Insp3ct0r,web,Hence combining the 3 parts gives the flag:,attack_execution
+04_Juggling_Facts,web,"Opening the challenge website, we get the following page. It present three buttons on the right to see other facts.
+Clicking on secret facts, it says, can only be accessed by admin.",overview
+04_Juggling_Facts,web,"Looking at the burpsuite proxy, under the hood it is sending post request to getfacts endpoint with the fact type parameter.
+Looking into the source code, the getfacts endpoint is controlled by getfacts function.
+The getfacts function basically have two main things. First there’s an if statement that checks if the request fact type is secret and the request is not coming from localhost then return the message that we saw earlier in the response. I tried to bypass this localhost condition by it didn’t work.
+Second there’s a switch statement which checks the type and returns the facts. Personally, i have not seen much switch statements so i had no idea but on some research i found that this was vulnerable because of type juggling.
+PHP has a feature called type juggling. This means that during the comparison of variables of different types, PHP will first convert them to a common, comparable type.
+Basically, the switch statements in php use loose comparision (==). Following image shows the structure of switch statements in php.
+Looking at strings loose comparisions, the condition can be true when providing the same strings or a true (boolean value).
+""secret""==""secret""  -> true
+""secret""==true      -> true",analysis
+04_Juggling_Facts,web,"So, providing the true keyword in type parameter makes the first switch case true when presents the secrets and our flag.",attack_execution
+18_Super_Serial,web,"Going to robots.txt shows that admin.phps is disallowed. This indicates that the phps extension is enabled within the php configuration for this webserver. Files with the phps extension contain php code but instead of running when they are accessed, they return an HTML representation of the literal php code.",overview
+18_Super_Serial,web,"We can access index.phps to find the following:
+The above php code points us in the direction of authentication.php. Looking at authentication.phps shows the following:
+The above php code points us in the direction of cookie.php. Looking at cookie.phps shows the following:
+Finally, the require_once() includes the cookie.php file. Let's view the source code:
+OK. A few things to note here. The cookie.php file is included in every page. The following code segment will deserialize our cookie and print the object when an error occurs. (""Deserialization error. "".$perm)
+Conveniently, the access_log class in authentication.php has the following __toString() method:
+__toString is one of the PHP magic methods that override PHP's default behaviour. This method is called when the object is converted to a string. So if we could get the above $perm variable to be our custom access_log object, we could achieve arbitrary file read on the target system.",analysis
+18_Super_Serial,web,"To do this, we simply serialize our custom access_log object, where we set log_file to ../flag.
+This can be done with the following script:
+Now, we add TzoxMDoiYWNjZXNzX2xvZyI6MTp7czo4OiJsb2dfZmlsZSI7czo3OiIuLi9mbGFnIjt9 as the login cookie on our browser and go to authentication.php. Note that we need to use authentication.php because that is the file where the required access_log class is defined.
+Now back to this code:
+Our custom access_log('../flag') object will be deserialized into $perm.
+This will most definitely generate an error because the access_log class has no such methods.
+This will catch the error and concatenate $perm to the ""Deserialization error. "" string. In doing so, $perm is converted to a string. This invokes the __toString() method which reads ../flag!
+The flag will be printed on our browser.",attack_execution
+Obfuscation,web,"When we visit the website, we can see an input field to submit a secret.",overview
+Obfuscation,web,"As we don't know the secret, we first look into the source code of the webpage and see obfuscated Javascript.",analysis
+Obfuscation,web,"With JSnice we can deobfuscate the code a bit and see the following.
+I did not read all the code but only tried the first two lines of the testSecret function in line 37/38. The result is the flag.",attack_execution
+01_Get_aHEAD,web,"Looking at the HTML of the website, we can see that both red and blue make a request to the same URL, however with a different HTTP request method. We can make the educated guess that the flag will be acessible by using a different HTTP request method.",overview
+01_Get_aHEAD,web,"As this challenge is named ""Get aHEAD,"" we can conclude that we must use the ""HEAD"" method to get the flag.",attack_execution
+10_It_is_my_Birthday,web,"I searched up ""MD5 collision"" and eventually found this website. 
+It provided 2 executable files (hello and erase) which have the same MD5 hash. I downloaded those files and changed the extension to a .pdf file.",analysis
+10_It_is_my_Birthday,web,"I uploaded those two files and the website redirected to the PHP:
+The flag can be found in a comment at the end of the PHP (before the HTML portion, line 37)",attack_execution
+17_Some_Assembly_Required_2,web,"Upon visiting the website, it appears to just be a textbox with a form.",overview
+17_Some_Assembly_Required_2,web,"After inspecting the website, you can see there's a G82XCw5CX3.js file. I visited mercury.picoctf.net:55336/JIFxzHyW8W which consisted of this.
+The first time I looked at it I gave up in 5 seconds. Anyways, in the const declaration one of the elements caught my attention. './JIFxzHyW8W' is a path.
+I visited mercury.picoctf.net:55336/JIFxzHyW8W and it gave a WebAssembly file.
+I translate the wasm file to wat and analyze the result.
+Now I translate to pseudo-code and analyze the result.
+We can see that check_flag stayed pretty much the same as last time, so we can assume that the magic happens in copy. If we diff it against the previous implementation (which simply stored the provided flag characters in memory without any extra manipulation) we can see that the new version includes some extra logic.
+What seems to be happening here is that characters from the flag are getting XORed with 8 before being saved at offset 1072+. We can also see that the string that check_flag uses to compare the user input to the expected flag (at offset 1024+) doesn't contain the flag in the clear anymore.",analysis
+17_Some_Assembly_Required_2,web,We'll take this string and XOR it with 8 to get the flag.,attack_execution
+01_simplewaf,web,The target of this challenge is reading the content of flag.txt file... but by someway to bypass the check includes('flag') of waf. All of the challenge code can be seen at main.js.,overview
+01_simplewaf,web,"After reading the source code, there are 2 question come to my mind.
+How to bypass the includes condition? (absolutely... that what we are looking for), and
+What type of argument the readFileSync function can take to read a file?
+By going around on Google, I found a write up for NodeJS Bypass Filter CTF, which is similar to this challenge at some point:
+Both challenge doesn't validate the type of input, which means we can pass input as an array instead of a string, and
+Both challenge require to bypass the includes function to reach the flag!",analysis
+01_simplewaf,web,"Bravo! Think that I found the right spot, I try the payload file[]=x&file[]=flag.txt. Unlucky, it can't bypass waf of this challenge",attack_execution
+01_simplewaf,web,"Why can't it bypass the waf? Well, I figure out there is a critial different point between the challenge at this line of code
+(item) => item && JSON.stringify(item).includes(""flag"")
+The simplewaf doesn't take the raw input to perform input validation, but transform the raw input a JSON string beforehand. So, the includes function still can check whether the transformed string contains flag or not.
+At this point, I can't think of anyway to bypass the includes function... So, I move to the second question, and take a look at NodeJS document of that function.
+Oke, so the path parameter can be either a <string> | <Buffer> | <URL> | <integer>. However, the type of requests query value is always string. How could we pass in the readFileSync function a URL, or an integer, or anything else other than a string?",analysis
+01_simplewaf,web,"At the first thought, I try format the string as a URL: http://localhost:3456/wow.html. Unlucky, it doesn't works~",attack_execution
+01_simplewaf,web,"Stopping fruitless effort at guessing, I decided to take a closer look of the readFileSync function at NodeJS source code on github.
+The code snippet from line 469 and below perform read file process, which is nothing to dive in. The main point we need to dive in is the code at line 467. Follow the code by investigating the fs.openSync function.
+Continue following by investigating the getValidatedPath function.
+Hold down, some interesting things appear at here. So if the fileURLOrPath value is not null, and there are exists href and origin in it, it will call to fileURLToPath, which transform the fileURLOrPath value to a URL. That is the point! I can feel that I'm going on the right way!
+Gaining momemtum, I continue investigating the fileURLToPath function.
+One additional condition for the fileURLOrPath value is that its protocol must be file:.
+After all of the check is passed, it will call the corresponding function to get path from the URL. Since I'm debugging on Linux, so I continue investigating at the getPathFromURLPosix function.
+Once again, another check occurs at this code snippet: the hostname must be empty. But, one remarkable things to note down here, and it will helps us bypass the includes check of simplewaf is that it will perform URL decode on the pathname to get the URL. This means if we pass a double URL encoded pathname value from the web application, it will ends up the file path being plaintext. And guess what? Since the value pass the client to the includes check is just URL decoded once, we can easily bypass this check also.
+Okay, let's sum it up all the things we need to do to pass a valid argument file as a URL into the readFileSync function.
+file is not null
+file.origin exists
+file.href exists
+file.protocol = 'file:'
+file.hostname = ''
+And the final requirement to bypass the waf and get the flag is:
+file.pathname is double URL encoded",analysis
+01_simplewaf,web,"From the analysis above, I construct the following payload:
+file[origin]=x&file[href]=x&file[protocol]=file:&file[hostname]=&file[pathname]=fla%2567.txt
+I just double URL encode the g character to bypass the waf. Using the payload, we succesfully get the tesst flag.
+image.png
+Okay, let's get the real flag for now~",attack_execution
+02_friends,web,"Another instance challenge, which again makes me so inconvenience to debug and investigate, so I create a docker images for this challenge and host it locally. I also upload the Dockerfile at my github repo.",overview
+02_friends,web,"The code is nearly 300 lines... There is a login function, follow and unfollow function, and our target is making admin follow us.
+The source code does not contains any snippet of code that stored the credentials of admin user. 
+Thought that the code could be hidden, or unprovided, I try to follow admin, but the application response ""user does not exist"". How strange it could be!
+So... there is no admin account. Then just create an admin account, then follow other account. However, we can create an admin account, as the username must be at least 6 characters.
+At this point, I got stuck. I found no entry point in code that we can input to edit followers data.
+After reading the write up from the others, I found that I misunderstood a snippet of code.
+Put it on prettier.io to see how this snippet of code actually look like. 
+It completely change everything. Beforehand, body.u, body.r and body.n seems to be the return value of map function, turns out to be index of a users' followers array. 
+The comma is now become the command operator.
+Let's take a small demo to understand comma operator behavior in array index. 
+Assume that arr = followers.get(req.username), the following code snippet will help us understand the behavior of comamnd operator.
+There are 2 things to notice from the results we get:
+We can assign the javascript array at any index. There is no line of code assign value for arr[0], but the js code still run without any error!
+In case there is comma operator in array index, only the last index get the assigned value, and other get undefined.
+At this point, you might think that: ""Alright, now I can just assign admin to the first index, then I can succesfully get the flag. My payload will be [body.u, body.r, body.n] = [""admin"", """", 1]. 
+Unfortunately, this payload will not work because the inserted value is an array, not a string that we want.
+The remaining problem is that by somehow, there is an element in followers array is value type of string, not array.
+This magic will completely solve the remaining problems. Talking about __proto__ is long, so I will not do it at this write up. 
+Let's examine the following snippet of code to understand the behavior of array __proto__.
+There are 2 things to notice from the results we get:
+Although there is no line of code assign value for arr1[0], the output of arr1 show that arr1[0]=""1"". This happens similar to arr2.
+The filled up missing value is the same as the value we assigned to arr1[""__proto__""] or arr2[""__proto__""], sequentially.
+Gotcha! At this point, we can finally solve the challenge, as we finally fill up the missing value with a controlled value and type, no matter what data is inserted in later!. Let's check it out!",analysis
+02_friends,web,"To solve this challenge, I use 4 requets.
+The first request just to login, and get the session
+The second request is fill up the value of __proto__ of the followers array.
+The third request is to fill up the followers array at index 1, so that the index 0 of followers array will be automatically filled up by the value the value of __proto__ of that array.
+And the final request is to get the flag!",attack_execution
+Friends,web,"Another instance challenge, which again makes me so inconvenience to debug and investigate, so I create a docker images for this challenge and host it locally. I also upload the Dockerfile at my github repo.",overview
+Friends,web,"The code is nearly 300 lines... There is a login function, follow and unfollow function, and our target is making admin follow us.
+The source code does not contains any snippet of code that stored the credentials of admin user. 
+Thought that the code could be hidden, or unprovided, I try to follow admin, but the application response ""user does not exist"". How strange it could be!
+So... there is no admin account. Then just create an admin account, then follow other account. However, we can create an admin account, as the username must be at least 6 characters.
+At this point, I got stuck. I found no entry point in code that we can input to edit followers data.
+After reading the write up from the others, I found that I misunderstood a snippet of code.
+Put it on prettier.io to see how this snippet of code actually look like. 
+It completely change everything. Beforehand, body.u, body.r and body.n seems to be the return value of map function, turns out to be index of a users' followers array. 
+The comma is now become the command operator.
+Let's take a small demo to understand comma operator behavior in array index. 
+Assume that arr = followers.get(req.username), the following code snippet will help us understand the behavior of comamnd operator.
+There are 2 things to notice from the results we get:
+We can assign the javascript array at any index. There is no line of code assign value for arr[0], but the js code still run without any error!
+In case there is comma operator in array index, only the last index get the assigned value, and other get undefined.
+At this point, you might think that: ""Alright, now I can just assign admin to the first index, then I can succesfully get the flag. My payload will be [body.u, body.r, body.n] = [""admin"", """", 1]. 
+Unfortunately, this payload will not work because the inserted value is an array, not a string that we want.
+The remaining problem is that by somehow, there is an element in followers array is value type of string, not array.
+This magic will completely solve the remaining problems. Talking about __proto__ is long, so I will not do it at this write up. 
+Let's examine the following snippet of code to understand the behavior of array __proto__.
+There are 2 things to notice from the results we get:
+Although there is no line of code assign value for arr1[0], the output of arr1 show that arr1[0]=""1"". This happens similar to arr2.
+The filled up missing value is the same as the value we assigned to arr1[""__proto__""] or arr2[""__proto__""], sequentially.
+Gotcha! At this point, we can finally solve the challenge, as we finally fill up the missing value with a controlled value and type, no matter what data is inserted in later!. Let's check it out!",analysis
+Friends,web,"To solve this challenge, I use 4 requets.
+The first request just to login, and get the session
+The second request is fill up the value of __proto__ of the followers array.
+The third request is to fill up the followers array at index 1, so that the index 0 of followers array will be automatically filled up by the value the value of __proto__ of that array.
+And the final request is to get the flag!",attack_execution
+08_logon,web,"No matter what credentials we use for the login, it successfully logs us in but doesn't give us the flag. This suggests that a cookie might be used to store a separate variable that might be preventing us from seeing the flag.",overview
+08_logon,web,"Sure enough, we notice an admin cookie set to False. Changing this to True and refreshing the page gives us the flag:",attack_execution
+19_Most_Cookies,web,I analyzed the server.py reference code. The highlighted code below has great importance.,overview
+19_Most_Cookies,web,"I found that if you entered a cookie name given in the cookie name list (view line 7 in the server.py code), you will go into the first if statement but completely miss the nested if.
+From this, it is clear we need to become admin to swipe that flag!
+Let's visit the given site.
+Use our old friend inspect > Application > Storage > Cookies
+From there, we see a cookie named session.
+You can view more information here for the details of each cookie value segment.
+Let's go to https://jwt.io/ to decode that cookie value ... we observe that the header is { ""very_auth"": ""blank"" }
+Yikes. We want to be ""admin"" instead of ""blank""
+Another thing to point out on that site is that there is a ""verify signature"" section. Since flask cookies involve encryption, there is a secret key set to protect against attackers.
+The app’s secret key is used to sign a flask session cookie so that it cannot be modified. However, since we know the secret key is one of the 28 cookie names, we can simply try them all until we successfully decrypt the cookie.",analysis
+19_Most_Cookies,web,"We can write a script that uses the logic from Flask’s SecureCookieSessionInterface to decode and encode cookies.
+Running the solve script will try each secret key and then once it successfully fins the key by decoding a know cookie, it will encode the above cookie data.
+We can replace the cookie on the website with our admin cookie, refresh the page, and the flag will be shown.",attack_execution
+24_Client-side-again,web,"We visit the website and inspect the source code, let's call a Javascript Beautifier in order to make the Javascript code a bit more readable.",overview
+24_Client-side-again,web,"We see that _0x4b5b is a function used to obfuscate different values. It is calculated in runtime. Luckily, we can use the browser's Javascript console (""Developer Tools"") in order to evaluate _0x4b5b and read its values.
+Let's replace the function calls with hardcoded values to improve readability.
+So this is very similar to dont-use-client-side, using substring to authenticate the password.
+We have some substrings composing the flag.
+Notice that there are some overlaps.",analysis
+24_Client-side-again,web,"An evil way to turn this into a flag would be by transforming the javascript substrings into Python array-assignment code and executing it.
+This gives us the flag at the price of allowing exec to slip into our code.",attack_execution
+23_picobrowser,web,"This website has a button you can press that will give you the flag. However, if you press it in your web browser, it will give you an error saying ""You're not picobrowser!"" and list some text after it that depends on your OS and browser (for me, it says Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:70.0) Gecko/20100101 Firefox/70.0, but yours will likely be different).",overview
+23_picobrowser,web,That string of text is known as a User-Agent and it tells the server what browser you're using.,analysis
+23_picobrowser,web,"To convince them that you're running picobrowser, you can just change your user-agent string. To do this, I chose to use curl because it easily allows you to control the headers.",attack_execution
+09_dont-use-client-side,web,"Opening the website greets us with a 'login' page, requiring credentials.",overview
+09_dont-use-client-side,web,"As referenced by the problem name, we assume that the check for the validity of the credentials is checked locally, and hence can be reversed to obtain the correct password. Checking the html source code gives us:
+The checkpass variable holds our input, and the each substring method in this case gets us split(set to 4) number of characters starting from the first argument to the method.",analysis
+09_dont-use-client-side,web,"We assemble the credentials, and hence the flag, accordingly:",attack_execution
+JAuth,web,"We get a test user:
+username: test
+password: Test123!
+If we log in, we get an empty page.",overview
+JAuth,web,"Let’s look at the login HTTP request.
+Nothing interesting. If we get set “Remember me” on we get the same request. Let’s check our cookies.
+This is a JWT token. Let’s decode it.
+We have a role part that is set to “user”. If we were to set it to admin, maybe we could log in as admin. I used https://jwt.io to encode it and we get.",analysis
+JAuth,web,"If we try setting that as our token, we can’t log in. So maybe if we change the alg to “none” we could log in:
+This is the header.
+This is the payload.
+We encoded the following payload.
+Nice we get the flag!",attack_execution
+Irish-Name-Repo3,web,There is a secure website running at https://2019shell1.picoctf.com/problem/47247/.,overview
+Irish-Name-Repo3,web,"Try to see if you can login as admin!
+Since the password is hinted to be encrypted, we first check the page source for any signs of encryption to the input, however, do not see any. 
+This means the encryption must be taking place server side.
+We want to leak the encryption method somehow, so we open BurpSuite to monitor the requests made to the site. 
+We input some string and submit the request. In BurpSuite, we notice a debug parameter, originally set to 0.
+We change this to a 1, and forward the request. Now in addition to the Login failed page, we get some debug info:
+The 'encryption' method used is just ROT13! We can thus craft our payloads normally, just running it through a ROT13 converter before sending it through.",analysis
+Irish-Name-Repo3,web,"We utilise a simple payload that escapes the string and always evaluates to true
+'Encrypting' it, we get.
+Submitting this as the input, we get our flag.",attack_execution
