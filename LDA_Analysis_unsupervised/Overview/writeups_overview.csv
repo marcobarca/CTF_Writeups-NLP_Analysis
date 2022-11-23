@@ -1,0 +1,216 @@
+Writeup_name,Category,Text,Label
+XMarkTheSpot,web,"Visiting the website, we are presented with a login form (and a Robert Frost poem).
+The hint says ""XPATH"", and using some common XPATH injection techniques we can leak some information about the underlying DB.
+",overview
+
+
+Members,web,"In the challenge members, we need to get more information about the members. This, again, sounds like an SQLi challenge.
+When we visit the members' page, we can see a search field and all members listed.
+The page shows a search field and all the members.
+",overview
+
+
+05_Cursed_Secret_Party,web,"Starting the challenge, we get the following page which presents a form.
+Submitting the form, it says that request will be reviewed by team.
+",overview
+
+
+High_Security,web,"We have again a login page. This time only, we can register a user. 
+",overview
+
+
+27_Forbidden_Paths,web,"This website has the useful feature of reading any file we want it too, given its path.
+",overview
+
+
+28_Power_Cookie,web,"As suggested by the challenge name, the solution likely involves changing a cookie value.
+",overview
+
+
+22_Web_Gauntlet_2,web,"The challenge gives us a link which opens a webpage allowing us to login with a username and password that we can deduce are vulnerable to SQL injection. Looking at the filter link we can see what we must avoid when crafting our SQL injection.
+",overview
+
+
+05_Some_Assembly_Required_1,web,"Upon visiting the website, it appears to just be a textbox with a form. 
+",overview
+
+
+
+BigHug,web,"BitHug is a web app listening on port 1823 that lets you do basic version control with Git. 
+To do this, it uses the Git CLI to perform operations on repositories. 
+The goal of this challenge is to get access to a Git repository that you do not own, and to prove that you can do this, you have to clone a (normally inaccessible) repository under the name _/{your username}, with the flag in it.
+There’s a lot of things that you can explore with this challenge, here I’ll outline the important ones for our final exploit.
+",overview
+
+
+21_Some_Assembly_Required_3,web,"Upon visiting the website, it appears to just be a textbox with a form. 
+",overview
+
+
+11_Who_are_you,web,"When we visit the site, it says
+Only people who use the official PicoBrowser are allowed on this site!
+",overview
+
+12_login,web,"On first inspection, when faced with a login screen, it seems like SQL injection, because isn’t that what always happens with logins in CTFs? 
+",overview
+
+
+02_Spookifier,web,"Navigating to website, we are presented with the following page.
+On giving an input, it is sent through get parameter and it reponds with same input with different font styles.
+",overview
+
+
+25_Web_Gauntlet,web,"In this challenge, we are linked to a login form we are meant to bypass with SQL injection. At each level the filter changes, so we have to update your injection as necessary.
+",overview
+
+Homework,web,"When following the link, we get an ERR_UNSAFE_PORT. 
+",overview
+
+
+Notepad,web,"The application is a simple note-taking site. When a new note is created, a file in the static folder is created, and the client is redirected to the file.
+",overview
+
+
+Authentication,web,"We can see a login page with the goal to log in as admin.
+",overview
+
+
+Note,web,"After browsing the site for few minutes, I realised that you can inject html code while creating new notes.
+",overview
+
+
+15_Local_Authority,web,"When you go to the website, you find the following login screen:
+",overview
+
+
+03_modernblog,web,"Look at the Admin Bot, we can definitely that this is client-side challenge. The source is React + Express backend, and most of the code is used for credentials management, and content management (creating, view blog content). The point is there are blog of admin containing the flag, with a randomId.
+Since we can view any post given the id known (or the access link), the point is to get the flagId, or admin account takeover. And, as I state, this is a client-side challenge, so we have to take a look at the client side code to see where the vulnerability occurs: it is the body of a post
+Let's move to the analysis phase to see how could we exploit this spot
+",overview
+
+
+
+
+LiveArt,web,"Exploring the website doesn’t reveal too much. 
+It’s pretty clear that the /link-submission page is intended for you to submit a link that will be “clicked-on” by a “victim” (In this case the victim is a headless browser, but that’s largely irrelevant here).
+",overview
+
+
+01_Evaluation_Deck,web,"Navigating to the challenge website, it presents the following page which list cards.
+On selecting a card, the HP of ghost increases of decrease depending on the points and operator.
+However, nothing happens on the victory.
+",overview
+
+
+JavaScriptKiddie,web,"The image link appears broken.
+",overview
+
+
+01_Pirate_birthday_planner,web,"The portion of code to check if a user is authorized in the party is done in this middleware
+",overview
+
+
+
+
+02_Cookies,web,"We visit the website and see the following message:
+Welcome to my cookie search page. See how much I like different kinds of cookies!
+",overview
+
+
+29_Roboto_Sans,web,"The challenge name seems to be either an allusion to the text font Roboto or /robots.txt.
+As investigating the text font files seems more complicated, let's first look at /robots.txt.
+",overview
+
+
+
+26_Some_Assembly_Required_4,web,"This is the final WebAssembly challenge. The process that I used to solve this challenge can also be applied to all the other ones as well, so I’ll just outline how I solved this one.
+I’m not very good at reverse engineering, and only have a very rudimentary understanding of WASM in general so I’m sure there’s a better way to go about this.
+",overview
+
+
+
+
+
+03_Horror Feeds,web,"Starting the challenge container, we are presented with the following login page which also presents option to register.
+Registering the new user and logging in, on the home page it shows spooky CCTV footage as told in the challenge description. There’s nothing more.
+",overview
+
+
+Lightweight,web,"In this challenge, we have an LDAP injection as the challenge description already gives us the hint. 
+",overview
+
+
+
+
+
+
+
+04_Juggling_Facts,web,"Opening the challenge website, we get the following page. It present three buttons on the right to see other facts.
+Clicking on secret facts, it says, can only be accessed by admin.
+",overview
+
+
+18_Super_Serial,web,"Going to robots.txt shows that admin.phps is disallowed. This indicates that the phps extension is enabled within the php configuration for this webserver. Files with the phps extension contain php code but instead of running when they are accessed, they return an HTML representation of the literal php code.
+",overview
+
+
+Obfuscation,web,"When we visit the website, we can see an input field to submit a secret. 
+",overview
+
+
+01_Get_aHEAD,web,"Looking at the HTML of the website, we can see that both red and blue make a request to the same URL, however with a different HTTP request method. We can make the educated guess that the flag will be acessible by using a different HTTP request method.
+",overview
+
+
+
+
+17_Some_Assembly_Required_2,web,"Upon visiting the website, it appears to just be a textbox with a form. 
+",overview
+
+
+01_simplewaf,web,"The target of this challenge is reading the content of flag.txt file... but by someway to bypass the check includes('flag') of waf. All of the challenge code can be seen at main.js.
+",overview
+
+
+
+
+
+
+02_friends,web,"Another instance challenge, which again makes me so inconvenience to debug and investigate, so I create a docker images for this challenge and host it locally. I also upload the Dockerfile at my github repo.
+",overview
+
+
+Friends,web,"Another instance challenge, which again makes me so inconvenience to debug and investigate, so I create a docker images for this challenge and host it locally. I also upload the Dockerfile at my github repo.
+",overview
+
+
+08_logon,web,"No matter what credentials we use for the login, it successfully logs us in but doesn't give us the flag. This suggests that a cookie might be used to store a separate variable that might be preventing us from seeing the flag. 
+",overview
+
+19_Most_Cookies,web,"I analyzed the server.py reference code. The highlighted code below has great importance.
+",overview
+
+
+24_Client-side-again,web,"We visit the website and inspect the source code, let's call a Javascript Beautifier in order to make the Javascript code a bit more readable.
+",overview
+
+
+23_picobrowser,web,"This website has a button you can press that will give you the flag. However, if you press it in your web browser, it will give you an error saying ""You're not picobrowser!"" and list some text after it that depends on your OS and browser (for me, it says Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:70.0) Gecko/20100101 Firefox/70.0, but yours will likely be different).
+",overview
+
+
+09_dont-use-client-side,web,"Opening the website greets us with a 'login' page, requiring credentials. 
+",overview
+
+
+JAuth,web,"We get a test user:
+username: test
+password: Test123!
+If we log in, we get an empty page.
+",overview
+
+
+Irish-Name-Repo3,web,"There is a secure website running at https://2019shell1.picoctf.com/problem/47247/. 
+",overview
+
+

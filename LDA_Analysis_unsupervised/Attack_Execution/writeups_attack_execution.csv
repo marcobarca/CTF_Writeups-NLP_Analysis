@@ -1,0 +1,370 @@
+Writeup_name,Category,Text,Label
+
+
+XMarkTheSpot,web,"For example, let's inject:
+This should tell us if the password of the first username is longer than 1 character. 
+If we submit this as the username, we get back a response from the server telling us that ""You're on the right path"", so we can deduce that password is longer than 1. 
+If we try this, on the other hand, we receive a ""Login Failure"": so the password is shorter than 30 characters.
+Let's use the following syntax to iterate some users and check if someone's password starts with ""pico"":
+We'll use curl.
+We got a match for the third user. Now let's extract his password with the following script.
+The script uses XPATH substring to brute force the password character by character. As output we have the flag.",attack_execution
+
+
+Members,web,"We tried out some SQLi payloads to see that a simple UNION SELECT works and gives results. The UNION SELECT is used to combine the result of two or more SELECTs. Since x gives no result, 1,1,1 is returned as result and verifies the SQLi.
+A simple union select as PoC.
+With this in mind, we looked for the database engine which is probably MySQL.
+A simple union select to leak the database version.
+Then we listed all tables and columns and saw that there is a table called supa_secret_table with the column flag.
+x"" UNION SELECT COLUMN_NAME, TABLE_NAME,table_schema FROM INFORMATION_SCHEMA.COLUMNS;
+An extract of all tables and columns.
+A quick query later, we received the flag.",attack_execution
+
+
+05_Cursed_Secret_Party,web,"Then convert the link of payload file on github to CDN url format.
+Next, we inject the following payload in the halloween_name parameter which first closes the div tag and then add our script from the github.
+After send the request, we get a hit on our link which in query strings contains the admin session cookie.
+Decoding the admin JWT, we get the flag.
+",attack_execution
+
+
+High_Security,web,"We then tried to change our IP address with the X-Forwarded-For header and it worked. The following request resulted in the IP 1.2.3.4 showing up in our table.
+Next, we put an XSS payload in the header instead of the IP and the good old alert popped.
+Since we had XSS, we guessed that there must be an admin user we can attack with our exploit. So, we sent the same request as above to admin and the following header:
+The payload worked on our side but unfortunately, we did not receive any request from an admin.
+Another payload we tried showed us that there indeed is an admin user. 
+With the following payload, the admin user admin requests an image from our URL. 
+The only thing is that we cannot execute Javascript and exfiltrate data.
+With our URL as image source, we receive a request from the user admin.
+We tried various payloads and ideas but did not succeed.
+A colleague message us that the admin uses PhantomJS, as you can see in the user-agent, and PhantomJS does not support fetch. We should have tried the good old XMLHttpRequest. 
+Finally, we sent a request to the admin that loads more Javascript code via the XSS in the X-Forward-For header. 
+The loaded payload sends the cookies of the user back to us. Thus, we received the flag.",attack_execution
+
+
+27_Forbidden_Paths,web,"Since we know that we are in /usr/share/nginx/html/, and want to access /flag.txt, we can just use the path ../../../../flag.txt to read the flag.
+",attack_execution
+
+
+28_Power_Cookie,web,"0 means false here, so if we change the cookie's value to 1 and refresh, the website treats us like the admin, giving us the flag.
+",attack_execution
+
+
+22_Web_Gauntlet_2,web,"Using the final values of username and password for login we get the message ""Congrats! You won! Check out filter.php"". Finally reloading the filter.php page gives us this source code with the flag.
+",attack_execution
+
+
+05_Some_Assembly_Required_1,web,"I visited mercury.picoctf.net:55336/JIFxzHyW8W and it gave a WebAssembly file. At the bottom of the file, there was the flag.
+",attack_execution
+
+
+
+BigHug,web,"Repositories can be accessed by the creator of the repository or a list of people as defined in the access.conf file of the refs/meta/config commit of the repository. 
+This hints us toward us needing to somehow modify this file as part of our exploit.
+The main thing that we will be exploiting is how webhooks are processed and sent. 
+Webhooks are a SSRF vector, and in theory we can make a webhook that POSTs a git-receive-pack that adds our user to the access.conf file. 
+However, this exploit won’t work since the server sanitizes our webhooks and only allows you to make webhooks that request to port 80. 
+It does this by parsing our URL using the URL class.
+However, when actually executing the webhook, there is an exploit that allows us to bypass this. 
+Below is the source code for the git-receive-pack endpoint.
+The formatString() function is defined as:
+So it will replace all {{attr}} in a string with options[attr].
+The important part of this is const url = formatString(webhook.url, options);. 
+This is a template injection vulnerability that allows us to enter a URL like http://{{ref}}.com, and then inject a ref that points to 127.0.0.1:1823/_/admin.git/git-receive-pack?a to bypass the port check since it only happens when the webhook is created.
+Surprisingly enough, Node.js URL will actually accept http://{{ref}}.com as valid and parses it accordingly.
+The final url would be http://127.0.0.1:1823/_/admin.git/git-receive-pack?a.com, with the webserver ignoring the query string.
+Now all we need to do is to somehow inject a string into the ref of a git-receive-pack. 
+We can look at how the ref is parsed in the receivePackPost function.
+This parsing is just basic string splitting so it should be easily exploitable.
+Given all of this the full exploit should be the following:
+Create a webhook with URL http://{{ref}}.com, Content-Type: application/x-git-receive-pack-request and the content of a git-receive-pack that commits our user account to the access.conf of the refs/meta/config.
+Trigger the webhook with a commit ref being 127.0.0.1:1823/_/admin.git/git-receive-pack?a.
+The hard part of this challenge is figuring out how to properly execute this exploit. 
+There is very little documentation on the git-receive-pack format and it seems nontrivial to figure out what the format actually is.
+Instead of figuring out how the format works, we can instead simply use the Git CLI to try making commits and reading the requests that it makes. 
+Most people would go straight to Wireshark for this purpose, but for the sake of simplicity I instead chose to modify the source code of the app and simply log out the hex of the request body directly.
+After doing this, we can make any commit to the repository and push it. Then we can take the raw body and replace the ref with our payload. I chose to make a very long branch name to make it easier to edit the raw data using a hex editor.
+My final payload looked like the following:
+Of course, depending on what you commit yours might look different.
+Next, we can follow the instructions on the website and use the same method discussed above to generate the git-receive-pack that includes a commit to access.conf to add our own user.
+My payload looked like this.
+Now that we have our payloads in place, we can make a short script to automate the exploit. 
+We first make the webhook with the template injection URL and payload for adding us to the repository and then we trigger that webhook with the ref injection.
+Now, we can just visit _/admin on the web interface and you should be able to read the flag.
+",attack_execution
+
+
+21_Some_Assembly_Required_3,web,"Translating this logic to Python, we get:
+Now we can add the array defined at 1024+ and brute force the flag.
+",attack_execution
+
+
+
+
+12_login,web,"If you’re not convinced it’s the real flag, you can decode the username (admin) and input both into the login form, which results in an alert announcing the flag.
+",attack_execution
+
+
+02_Spookifier,web,"Then using the following payload, we can run commands on the system and read our flag.
+",attack_execution
+
+
+
+
+Homework,web,"Knowing this, we tried to load local files with the file:// scheme. However, the server would always respond with an error.
+This was until randomly, a colleague tried to add the type attribute type=""text/plain"" and got a result. Together with this attribute and the correct source, we were able to exfiltrate /etc/passwd.
+From here, we looked at /proc/self/environto list the environment variables.
+From the environment variables, we can see some interesting directories to search for the flag. Finally, the flag was in /app/flag.",attack_execution
+
+
+Notepad,web,"We can test a sample payload now:
+If we paste that into the text area on the index page and submit, we get redirected to a Not Found error page. 
+Not to worry! Since we wrote to a file outside of the static folder, we can’t access it from /static/..., which resulted in the 404. 
+However, we can check out our payload by passing our filename (minus extension) into error. 
+The path I got redirected to was /templates/errors/-lww21e3EmpA.html so I went to.
+Lo and behold, our payload was printed back to us!
+Since the error page is included as a Jinja template and not as a static page, we can utilize a server-side template injection to retrieve the flag. 
+I found a great reference that detailed how to implement a SSTI with the Jinja template engine.
+After the path of the errors folder, I padded the payload with a characters so that none of the injection was stored in the filename. 
+While this is optional, I found that it made the request much cleaner because the filename isn’t url encoded.
+The next step is to find the string class. 
+This is usually done with ''.__class__ but because of the filter on underscores, we can’t insert __class__ directly into the content parameter. 
+We can, however, insert it into a different query parameter and reference it that way. 
+We can then get the string class’s method resolution order using mro().
+The second class in the string class’s MRO is the object class so we can index to 1.
+If we call object.__subclasses__(), we can access all the classes that are available. 
+Since underscores are filtered, we can access the function the same way we accessed __class__. 
+Our full payload is now:
+When we access the index page with the filename passed into error, we get an internal server error. 
+This is because we didn’t pass in the class or subclasses query parameters. 
+After setting them to __class__ and __subclasses__, respectively, a whole bunch of stuff is rendered.
+Nice! We got a whole bunch of classes from that. 
+The most important of those is subprocess.Popen. 
+To find the index of that class more easily, I pasted the stringified list into a Python shell (as a string), split the list on , , and called l.index("" <class 'subprocess.Popen'>"") to find that the subprocess.Popen class is at index 273. 
+That means that we can create a new Popen object to execute some pretty useful commands.
+The provided Dockerfile showed that the flag is located in the app’s root directory with a random UUID appended to it. 
+Therefore, we need to find the flag’s filename; we can ls the root directory and return the result with this injection:
+The flag’s filename is flag-c8f5526c-4122-4578-96de-d7dd27193798.txt. Last but not least, we can cat the flag.
+",attack_execution
+
+
+Authentication,web,"On the webpage, we don’t see a flag so we open the source code of the page with ctrl-u and find the flag as a hidden field at the bottom of the page.",attack_execution
+
+
+Note,web,"So, my plan is simple. I will create an account on main servers with credentials a:a.
+Then, I will created a script that will access webhook.site url with body contents of a particular window named ""pwn"" (This will be created later). Let's have a look at the script.
+I added a clause to check for ?pwn in the url because without it the website was crashing since it was redirecting every time you accessed notes. Now, let's go ahead and plant it.
+Now, it is time for the main script. 
+The one that goes into the /report page, into the url field.
+Here I want to do three things inside puppeteer in a sequence. 
+Open a new window named ""pwn"" with url http://localhost/notes. 
+This will open the ""My notes"" page as bot account. Which has the flag.
+Login in to our test account with credentials a:a.
+Go to /notes?pwn after logging in which will capture the contents of ""pwn"" window automatically due to xss.
+That's it. That should do it. Now let's have a look at the code. 
+Chrome tells that the contents are html. 
+Next, we create a form with action as the local login page and pre-enter the credentials as values in the input fields. 
+Next we execute our sequence inside a script tag. 
+We open a window named ""pwn"" with notes url (This has our flag in body). 
+Then we wait 1 second and submit our login form. 
+After we are logged in as ""a:a"" we then open /notes?pwn after 1.5 seconds which will trigger our XSS and steal the contents from the ""pwn"" tag which still has body from the bot account (and the flag).
+We'll go ahead and first get this script in one line and then enter it into the ""url"" section of /report.
+Now we wait for 2.5 seconds and we get the flag!",attack_execution
+
+
+15_Local_Authority,web,"Okay, that was not difficult. The login credentials for the website are
+If we copy the password, go back to the login screen, enter the password together with the username admin, we get the flag:
+",attack_execution
+
+
+03_modernblog,web,"We can use the srcdoc attribute of the iframe tag to create another React app, using the provided public JS file. Let's try it:
+We get an error, as it fails to change document.defaultview.History while it is currently pointing to the current window int about:srcdoc. But, if we combine if React gadget, we got the following:
+",attack_execution
+
+03_modernblog,web,"Based on the above analysis, we now can use classical CSS techniques to leak the flagId. Using the script generated by the python code below, then create a blog whose body of it, and get each character of flagId at webhook:
+Attempt 12 times to get the full flagId, and the flag!
+",attack_execution
+
+
+LiveArt,web,"We can now execute javascript on the page.
+All that’s left to do is weaponize this. 
+We’ll load up the drawing route in a small iframe with our XSS payload in the hash parameters. 
+We’ll then resize the iframe to trigger the vulnerability. 
+All our payload has to do is read from localstorage and send it to our server.
+We can now host our payload with a simple http server using python3 -m http.server and then make it publicly accessible using ngrok http 8000. 
+This will give us an http/https server on a .ngrok.io subdomain that we can put into the link-submission form. 
+I tried using other ports and they were blocked, so I believe the challenge only supports connecting to servers on either port 80 or 443.
+As we can see here, the XSS worked, and about 1 second after the request for our xss payload we get another request containing the flag!",attack_execution
+
+
+01_Evaluation_Deck,web,"Since, current_health and attack_power are passed into int function, injecting code into them will cause issue. But, the operator parameter is directly passed as string so we can use it.
+We can confirm this by commenting the attack_power parameter. Basically the following payload will look like this:
+100 - 100# 34
+So, we can inject code before the comment.
+Start the ngrok proxy which forward requests to local port 8080.
+Start listening on port 8080 to receive connection.
+Injection the following payload gives a reverse shell on the challenge container.
+The flag is placed at the root.
+",attack_execution
+
+
+JavaScriptKiddie,web,"We can thus write a python script to find us possible values for the first 8 digits of the key using the header, and the last 8 digits using the trailer, giving us the final key.
+This gives us the first 8 digits.
+For the last 8 digits, the actual result might include a bunch of 0s at the end, instead of the actual trailer, as we see that the javascript script actually does work to remove these just before the image is used as a source. 
+We thus try our luck with the ending being 00 00 00 00 00 00 00 00 first, as we notice multiple 0s in the bytes array, leading us to believe that some of these might actually be at the end. 
+We get a list of possible numbers for the last 8 digits of the key with this script.
+We then use the following to iterate through the combination possibilities.
+We use the command pngcheck output*, and notice that output0 gives OK. 
+We open it and see a qr code, whcih we use zbarimg to decode to get the flag.
+",attack_execution
+
+
+01_Pirate_birthday_planner,web,"Thanks to it we can send data as json, injecting objects inside the input parameters of the server.
+Our first try was the /new endpoint
+Here we confirmed that it’s possible to set as a pin an object like {""$ne"":""a""} and bypass the check.
+",attack_execution
+
+01_Pirate_birthday_planner,web,"With the user bypass and the right pin the payload session will pass the checks for the legit party.
+In the last step we use the payload session to change again the pin of the legit party with a bypass object.
+Now the payload session can bypass the checks for all the parties in the server, we just need to collect all the flags from the /detail endpoint and reverse the xor.
+",attack_execution
+
+
+02_Cookies,web,"Let's search for that special cookie by trying different numbers:
+",attack_execution
+
+
+29_Roboto_Sans,web,"If we decode each line separately, we find that the second line gives us a valid path, specifically js/myfile.txt. If we navigate to the suburl, we get the flag.
+",attack_execution
+31_SQL_Direct,web,"Let's connect to the PostgreSQL.
+Now, Let's run /dt to list the tables of the public schema.
+Now let's run select command from flags table on public schema.
+And we get the flag.
+",attack_execution
+
+
+26_Some_Assembly_Required_4,web,"Using this, I was able to write a quick Node.js script that would brute force the characters. I’ve cleaned it up a bit and added comments for a bit of clarity.
+",attack_execution
+
+
+30_Secrets,web,"The flag is probably hidden by the css. We can just look at the HTML source to get the flag.
+",attack_execution
+
+
+03_Horror Feeds,web,"Next, we just inject the following payload into the username parameter and it will change the admin password hash.
+After adding payload the query will look like this:
+Then, we just login into the dashboard using the password that we just set and get the flag.
+",attack_execution
+
+Lightweight,web,"Thus, on the login page, we first tried some LDAP injection payload which results in some nice PHP error messages.
+A closing bracket breaks the LDAP filter.
+",attack_execution
+
+Lightweight,web,"At this point, we injected a new filter into the LDAP request and brute forced the description of the users as a proof of concept.
+The injected filter returns “Invalid username/password !” since the user was found with this filter but the password was incorrect.
+In the example below, I use the Burp Intruder to try all possibilities for description, one by one. You can see, that I previously found the description sysa and the request shows me that the next letter is d. In the end, the description will be sysadmin.
+After the brute force attempt worked fine for description, we tried the same with userPassword as it is the standard password key for LDAP. 
+With * the request worked fine, however, no character we tried resulted in “Invalid username/password !” but only “No such user !”.
+",attack_execution
+
+Lightweight,web,"Finally, after bruteforcing the password hash, we have the base64 of the MD5 hash.
+Submitting this hash to https://crackstation.net/, we receive the password Chicken123.
+Now we can log in as the mkiloa@dvctf.local see the flag.",attack_execution
+
+03_Insp3ct0r,web,"Hence combining the 3 parts gives the flag:
+",attack_execution
+
+
+04_Juggling_Facts,web,"So, providing the true keyword in type parameter makes the first switch case true when presents the secrets and our flag.
+",attack_execution
+
+
+18_Super_Serial,web,"To do this, we simply serialize our custom access_log object, where we set log_file to ../flag.
+This can be done with the following script:
+Now, we add TzoxMDoiYWNjZXNzX2xvZyI6MTp7czo4OiJsb2dfZmlsZSI7czo3OiIuLi9mbGFnIjt9 as the login cookie on our browser and go to authentication.php. Note that we need to use authentication.php because that is the file where the required access_log class is defined.
+Now back to this code:
+Our custom access_log('../flag') object will be deserialized into $perm.
+This will most definitely generate an error because the access_log class has no such methods.
+This will catch the error and concatenate $perm to the ""Deserialization error. "" string. In doing so, $perm is converted to a string. This invokes the __toString() method which reads ../flag!
+The flag will be printed on our browser.
+",attack_execution
+
+
+Obfuscation,web,"With JSnice we can deobfuscate the code a bit and see the following.
+I did not read all the code but only tried the first two lines of the testSecret function in line 37/38. The result is the flag.
+",attack_execution
+
+
+01_Get_aHEAD,web,"As this challenge is named ""Get aHEAD,"" we can conclude that we must use the ""HEAD"" method to get the flag.
+",attack_execution
+
+10_It_is_my_Birthday,web,"I uploaded those two files and the website redirected to the PHP:
+The flag can be found in a comment at the end of the PHP (before the HTML portion, line 37)
+",attack_execution
+
+
+17_Some_Assembly_Required_2,web,"We'll take this string and XOR it with 8 to get the flag.
+",attack_execution
+
+
+01_simplewaf,web,"Bravo! Think that I found the right spot, I try the payload file[]=x&file[]=flag.txt. Unlucky, it can't bypass waf of this challenge
+",attack_execution
+
+01_simplewaf,web,"At the first thought, I try format the string as a URL: http://localhost:3456/wow.html. Unlucky, it doesn't works~
+",attack_execution
+
+01_simplewaf,web,"From the analysis above, I construct the following payload:
+file[origin]=x&file[href]=x&file[protocol]=file:&file[hostname]=&file[pathname]=fla%2567.txt
+I just double URL encode the g character to bypass the waf. Using the payload, we succesfully get the tesst flag.
+image.png
+Okay, let's get the real flag for now~
+",attack_execution
+
+
+02_friends,web,"To solve this challenge, I use 4 requets.
+The first request just to login, and get the session
+The second request is fill up the value of __proto__ of the followers array.
+The third request is to fill up the followers array at index 1, so that the index 0 of followers array will be automatically filled up by the value the value of __proto__ of that array.
+And the final request is to get the flag!",attack_execution
+
+
+Friends,web,"To solve this challenge, I use 4 requets.
+The first request just to login, and get the session
+The second request is fill up the value of __proto__ of the followers array.
+The third request is to fill up the followers array at index 1, so that the index 0 of followers array will be automatically filled up by the value the value of __proto__ of that array.
+And the final request is to get the flag!",attack_execution
+
+08_logon,web,"Sure enough, we notice an admin cookie set to False. Changing this to True and refreshing the page gives us the flag:
+",attack_execution
+
+
+19_Most_Cookies,web,"We can write a script that uses the logic from Flask’s SecureCookieSessionInterface to decode and encode cookies.
+Running the solve script will try each secret key and then once it successfully fins the key by decoding a know cookie, it will encode the above cookie data.
+We can replace the cookie on the website with our admin cookie, refresh the page, and the flag will be shown.
+",attack_execution
+
+
+24_Client-side-again,web,"An evil way to turn this into a flag would be by transforming the javascript substrings into Python array-assignment code and executing it.
+This gives us the flag at the price of allowing exec to slip into our code.
+",attack_execution
+
+
+23_picobrowser,web,"To convince them that you're running picobrowser, you can just change your user-agent string. To do this, I chose to use curl because it easily allows you to control the headers.
+",attack_execution
+
+
+09_dont-use-client-side,web,"We assemble the credentials, and hence the flag, accordingly:
+",attack_execution
+
+
+JAuth,web,"If we try setting that as our token, we can’t log in. So maybe if we change the alg to “none” we could log in:
+This is the header.
+This is the payload.
+We encoded the following payload.
+Nice we get the flag!
+",attack_execution
+
+
+Irish-Name-Repo3,web,"We utilise a simple payload that escapes the string and always evaluates to true
+'Encrypting' it, we get.
+Submitting this as the input, we get our flag.",attack_execution
